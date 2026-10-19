@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.BatteryManager
 import android.os.Bundle
 import android.speech.RecognizerIntent
+import android.speech.tts.TextToSpeech
 import android.text.InputType
 import android.view.ViewGroup
 import android.widget.Button
@@ -29,6 +30,7 @@ import java.util.Locale
 class MainActivity : Activity() {
     private lateinit var transcript: TextView
     private lateinit var commandInput: EditText
+    private var textToSpeech: TextToSpeech? = null
     private val speechRequestCode = 41
     private val audioPermissionRequestCode = 42
 
@@ -54,6 +56,9 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         window.statusBarColor = android.graphics.Color.rgb(12, 18, 17)
         window.navigationBarColor = android.graphics.Color.rgb(12, 18, 17)
+        textToSpeech = TextToSpeech(this) { status ->
+            if (status == TextToSpeech.SUCCESS) textToSpeech?.language = Locale.getDefault()
+        }
         buildInterface()
     }
 
@@ -162,6 +167,7 @@ class MainActivity : Activity() {
             }
         }
         transcript.text = "You: $raw\n\nAssistant: $response"
+        textToSpeech?.speak(response, TextToSpeech.QUEUE_FLUSH, null, "assistant-response")
         commandInput.text.clear()
     }
 
@@ -205,6 +211,7 @@ class MainActivity : Activity() {
             runOnUiThread {
                 val answer = result.getOrElse { "AI request failed: ${it.message ?: "unknown error"}" }
                 transcript.text = "You: $prompt\n\nAssistant: $answer"
+                textToSpeech?.speak(answer, TextToSpeech.QUEUE_FLUSH, null, "assistant-ai-response")
             }
         }
     }
@@ -293,6 +300,13 @@ class MainActivity : Activity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == audioPermissionRequestCode && grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) launchSpeechRecognizer()
         else if (requestCode == audioPermissionRequestCode) Toast.makeText(this, "Microphone permission is needed for voice input. Text input still works.", Toast.LENGTH_LONG).show()
+    }
+
+    override fun onDestroy() {
+        textToSpeech?.stop()
+        textToSpeech?.shutdown()
+        textToSpeech = null
+        super.onDestroy()
     }
 
     private fun fullWidthButton() = LinearLayout.LayoutParams(
