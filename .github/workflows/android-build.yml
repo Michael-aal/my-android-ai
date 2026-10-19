@@ -26,12 +26,12 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - name: Build debug APK
-        run: gradle assembleDebug
-      - name: Upload debug APK
+      - name: Build both variants
+        run: gradle assembleSafeDebug assembleFullControlDebug
+      - name: Upload safer sideload APK only
         uses: actions/upload-artifact@v4
         with:
-          name: my-android-ai-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: my-android-ai-safe-debug-apk
+          path: app/build/outputs/apk/safe/debug/*.apk
           if-no-files-found: error
           retention-days: 14
