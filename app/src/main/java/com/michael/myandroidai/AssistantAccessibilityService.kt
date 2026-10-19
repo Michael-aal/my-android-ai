@@ -8,6 +8,7 @@ import android.view.Gravity
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import android.view.accessibility.AccessibilityWindowInfo
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -75,20 +76,28 @@ class AssistantAccessibilityService : AccessibilityService() {
     fun goBack(): Boolean = performGlobalAction(GLOBAL_ACTION_BACK)
     fun goHome(): Boolean = performGlobalAction(GLOBAL_ACTION_HOME)
 
+    private fun foregroundAppRoot(): AccessibilityNodeInfo? {
+        // Prefer the real app window rather than this assistant's own accessibility overlay.
+        val appWindow = windows.firstOrNull {
+            it.isActive && it.type != AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY
+        } ?: windows.firstOrNull { it.type != AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY }
+        return appWindow?.root ?: rootInActiveWindow
+    }
+
     fun visibleTextSnapshot(): List<String> {
-        val root = rootInActiveWindow ?: return emptyList()
+        val root = foregroundAppRoot() ?: return emptyList()
         val result = mutableListOf<String>()
         collectVisibleText(root, result)
         return result
     }
 
     fun clickVisibleText(label: String): Boolean {
-        val root = rootInActiveWindow ?: return false
+        val root = foregroundAppRoot() ?: return false
         return findAndAct(root, label.trim().lowercase(Locale.ROOT), AccessibilityNodeInfo.ACTION_CLICK)
     }
 
     fun setFocusedText(value: String): Boolean {
-        val root = rootInActiveWindow ?: return false
+        val root = foregroundAppRoot() ?: return false
         val focused = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT) ?: return false
         val args = android.os.Bundle().apply {
             putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value)
