@@ -4,11 +4,13 @@ A native Android assistant built by migrating the reusable intent and assistant 
 
 ## Current features
 
-- Text commands and speech-to-text from the app screen
+- Text commands and speech-to-text from the app screen and floating assistant
 - Open common Android apps and URLs
 - Optional floating command panel through Android Accessibility (must be manually enabled by the device owner)
 - User-requested visible-label tap, focused-field text entry, screen-text reading, Back and Home actions
 - Time, date, and battery queries
+- Spoken responses through Android Text-to-Speech
+- Gemini AI fallback using a key entered by the user and encrypted with Android Keystore
 - Dark interface with explicit permission setup
 
 ## Project structure
