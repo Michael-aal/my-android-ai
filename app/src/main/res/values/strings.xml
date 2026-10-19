@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">My Android AI</string>
+    <string name="accessibility_description">Allows My Android AI to read visible app interface text for user-requested assistance. Enable this service only if you want to use app assistance.</string>
+</resources>
