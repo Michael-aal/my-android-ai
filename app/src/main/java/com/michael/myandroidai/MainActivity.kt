@@ -179,7 +179,7 @@ class MainActivity : Activity() {
         val launch = match?.let { packageManager.getLaunchIntentForPackage(it.activityInfo.packageName) }
         if (launch != null) {
             startActivity(launch)
-            return "Opening ${match.loadLabel(packageManager)}."
+            return "Opening ${match?.loadLabel(packageManager) ?: name}."
         }
         return "I couldn't find an installed app named “$name”. Check the app name or install it first."
     }
