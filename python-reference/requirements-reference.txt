@@ -1,0 +1,18 @@
+# Reference only — these desktop dependencies are NOT Android app dependencies.
+# The original requirements.txt was empty; modules may need additional packages.
+python-dotenv
+openai
+google-generativeai
+groq
+mistralai
+cohere
+openai-whisper
+sounddevice
+numpy
+scipy
+noisereduce
+psutil
+anthropic
+edge-tts
+pygame
+pycaw; platform_system == "Windows"
