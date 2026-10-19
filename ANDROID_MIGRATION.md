@@ -13,7 +13,7 @@ This is a native Android app, not a desktop Python process copied onto a phone. 
 | `intent_engine.py` | `AssistantCommandRouter.kt` — first native intent port |
 | `action_engine.py`, `app_controller.py` | `MainActivity.kt` and `AssistantAccessibilityService.kt` — Android app launch, URLs, navigation, text and visible-label actions |
 | `listener.py` | Android speech-recognition intent from the app screen; continuous wake-word listening is not implemented yet |
-| `voice.py`, `TTS.py` | Android speech output is not connected yet |
+| `voice.py`, `TTS.py` | Android `TextToSpeech` is connected in `MainActivity.kt`; wake-word and continuous background listening remain unimplemented |
 | `ai_engine.py` | Preserved as reference; `AiProviderClient.kt` supports Gemini, Groq, and OpenRouter with per-provider device-encrypted key storage |
 | `permissions.py` | Android runtime microphone permission and explicit manual Accessibility enablement |
 | `database.py`, memory modules | Not migrated to persistent memory yet |
