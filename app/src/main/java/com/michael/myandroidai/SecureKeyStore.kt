@@ -10,27 +10,30 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-/** Encrypts a user-supplied provider key with an AES key held by Android Keystore. */
+/** Encrypts each provider key with an AES key held by Android Keystore. */
 object SecureKeyStore {
     private const val ANDROID_KEY_STORE = "AndroidKeyStore"
     private const val KEY_ALIAS = "my_android_ai_provider_key_v1"
     private const val PREFS = "secure_ai_settings"
-    private const val KEY_VALUE = "encrypted_gemini_key"
 
-    fun saveGeminiKey(context: Context, apiKey: String) {
+    fun saveProviderKey(context: Context, provider: String, apiKey: String) {
         require(apiKey.isNotBlank()) { "API key cannot be empty." }
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKey())
-        val encrypted = cipher.doFinal(apiKey.toByteArray(Charsets.UTF_8))
+        val encrypted = cipher.doFinal(apiKey.trim().toByteArray(Charsets.UTF_8))
         val packed = cipher.iv + encrypted
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-            .putString(KEY_VALUE, Base64.encodeToString(packed, Base64.NO_WRAP))
+            .putString(storageName(provider), Base64.encodeToString(packed, Base64.NO_WRAP))
             .apply()
     }
 
-    fun getGeminiKey(context: Context): String? {
-        val encoded = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getString(KEY_VALUE, null) ?: return null
+    fun getProviderKey(context: Context, provider: String): String? {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        // Migrate the original Gemini-only key without exposing it or requiring the user to re-enter it.
+        val storageName = storageName(provider)
+        val encoded = prefs.getString(storageName, null)
+            ?: if (provider.equals("gemini", true)) prefs.getString("encrypted_gemini_key", null) else null
+            ?: return null
         return try {
             val packed = Base64.decode(encoded, Base64.NO_WRAP)
             if (packed.size <= 12) return null
@@ -44,9 +47,23 @@ object SecureKeyStore {
         }
     }
 
-    fun clearGeminiKey(context: Context) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(KEY_VALUE).apply()
+    fun clearProviderKey(context: Context, provider: String) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .remove(storageName(provider))
+            .apply()
+        if (provider.equals("gemini", true)) {
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                .remove("encrypted_gemini_key").apply()
+        }
     }
+
+    // Backward-compatible helpers for any existing code paths.
+    fun saveGeminiKey(context: Context, apiKey: String) = saveProviderKey(context, "gemini", apiKey)
+    fun getGeminiKey(context: Context): String? = getProviderKey(context, "gemini")
+    fun clearGeminiKey(context: Context) = clearProviderKey(context, "gemini")
+
+    private fun storageName(provider: String) =
+        "encrypted_${provider.lowercase().filter { it.isLetterOrDigit() }}_key"
 
     private fun getOrCreateKey(): SecretKey {
         val store = KeyStore.getInstance(ANDROID_KEY_STORE).apply { load(null) }
