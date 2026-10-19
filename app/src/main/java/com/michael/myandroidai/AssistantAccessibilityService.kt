@@ -160,6 +160,17 @@ class AssistantAccessibilityService : AccessibilityService() {
             }
         }, LinearLayout.LayoutParams(0, dp(44), 1f))
         actions.addView(Button(this).apply {
+            text = "Speak"
+            setOnClickListener {
+                try {
+                    startActivity(Intent(this@AssistantAccessibilityService, VoiceCommandActivity::class.java)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                } catch (_: Exception) {
+                    responseLabel?.text = "Couldn't start voice input. Try using the assistant app screen."
+                }
+            }
+        }, LinearLayout.LayoutParams(0, dp(44), 1f))
+        actions.addView(Button(this).apply {
             text = "Minimize"
             setOnClickListener { renderCollapsedPanel() }
         }, LinearLayout.LayoutParams(0, dp(44), 1f))
@@ -192,6 +203,12 @@ class AssistantAccessibilityService : AccessibilityService() {
             WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
             (if (focusable) 0 else WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
         try { windowManager?.updateViewLayout(panel, params) } catch (_: Exception) { }
+    }
+
+    fun runCommandFromOverlay(raw: String): String {
+        val reply = runOverlayCommand(raw)
+        responseLabel?.text = reply
+        return reply
     }
 
     private fun runOverlayCommand(raw: String): String {
