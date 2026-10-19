@@ -4,6 +4,7 @@ import android.accessibilityservice.AccessibilityService
 import android.content.Intent
 import android.net.Uri
 import android.os.BatteryManager
+import android.speech.tts.TextToSpeech
 import android.view.Gravity
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
@@ -38,6 +39,7 @@ class AssistantAccessibilityService : AccessibilityService() {
     private var commandField: EditText? = null
     private var responseLabel: TextView? = null
     private var expanded = true
+    private var textToSpeech: TextToSpeech? = null
 
     private val appPackages = mapOf(
         "whatsapp" to "com.whatsapp",
@@ -58,12 +60,18 @@ class AssistantAccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         activeService = this
+        textToSpeech = TextToSpeech(this) { status ->
+            if (status == TextToSpeech.SUCCESS) textToSpeech?.language = Locale.getDefault()
+        }
         showAssistantOverlay()
     }
 
     override fun onDestroy() {
         if (activeService === this) activeService = null
         removeOverlay()
+        textToSpeech?.stop()
+        textToSpeech?.shutdown()
+        textToSpeech = null
         super.onDestroy()
     }
 
@@ -155,8 +163,7 @@ class AssistantAccessibilityService : AccessibilityService() {
             text = "Run"
             setOnClickListener {
                 val raw = commandField?.text?.toString().orEmpty().trim()
-                val reply = runOverlayCommand(raw)
-                responseLabel?.text = reply
+                runCommandFromOverlay(raw)
             }
         }, LinearLayout.LayoutParams(0, dp(44), 1f))
         actions.addView(Button(this).apply {
@@ -208,6 +215,7 @@ class AssistantAccessibilityService : AccessibilityService() {
     fun runCommandFromOverlay(raw: String): String {
         val reply = runOverlayCommand(raw)
         responseLabel?.text = reply
+        textToSpeech?.speak(reply, TextToSpeech.QUEUE_FLUSH, null, "assistant-reply")
         return reply
     }
 
