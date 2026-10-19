@@ -2,12 +2,14 @@ package com.michael.myandroidai
 
 import android.Manifest
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.BatteryManager
 import android.os.Bundle
 import android.speech.RecognizerIntent
+import android.text.InputType
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
@@ -117,6 +119,10 @@ class MainActivity : Activity() {
             setOnClickListener { startVoiceInput() }
         }, fullWidthButton())
         root.addView(Button(this).apply {
+            text = "Configure AI"
+            setOnClickListener { configureAi() }
+        }, fullWidthButton())
+        root.addView(Button(this).apply {
             text = "Set up app assistance"
             setOnClickListener {
                 startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
@@ -150,10 +156,57 @@ class MainActivity : Activity() {
             "date" -> "Today is " + DateFormat.getDateInstance(DateFormat.FULL).format(Date())
             "battery" -> batteryStatus()
             "stop" -> "Okay. You can close this screen whenever you're ready."
-            else -> "I haven't connected an AI reasoning provider for this request yet. I received: “${command.argument}”."
+            else -> {
+                askAi(command.argument)
+                "Thinking… I'll reply here when the AI responds."
+            }
         }
         transcript.text = "You: $raw\n\nAssistant: $response"
         commandInput.text.clear()
+    }
+
+    private fun configureAi() {
+        val input = EditText(this).apply {
+            hint = "Paste your Gemini API key"
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            setSingleLine(true)
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Configure AI")
+            .setMessage("Your key is encrypted with Android Keystore and stored on this device. It is not committed to GitHub.")
+            .setView(input)
+            .setPositiveButton("Save key") { _, _ ->
+                val key = input.text.toString().trim()
+                if (key.isNotBlank()) {
+                    try {
+                        SecureKeyStore.saveGeminiKey(this, key)
+                        Toast.makeText(this, "AI key saved securely on this device.", Toast.LENGTH_LONG).show()
+                    } catch (_: Exception) {
+                        Toast.makeText(this, "Couldn't securely save that key.", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+            .setNeutralButton("Remove key") { _, _ ->
+                SecureKeyStore.clearGeminiKey(this)
+                Toast.makeText(this, "Saved AI key removed.", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun askAi(prompt: String) {
+        if (!AiProviderClient.hasKey(this)) {
+            runOnUiThread {
+                transcript.text = "Assistant: No AI key is configured yet. Tap Configure AI and add your Gemini API key."
+            }
+            return
+        }
+        AiProviderClient.ask(this, prompt) { result ->
+            runOnUiThread {
+                val answer = result.getOrElse { "AI request failed: ${it.message ?: "unknown error"}" }
+                transcript.text = "You: $prompt\n\nAssistant: $answer"
+            }
+        }
     }
 
     private fun openApp(rawName: String): String {
