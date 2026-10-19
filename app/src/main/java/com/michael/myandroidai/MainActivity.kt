@@ -16,6 +16,8 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.Spinner
+import android.widget.ArrayAdapter
 import android.widget.TextView
 import android.widget.Toast
 import java.text.DateFormat
@@ -169,7 +171,7 @@ class MainActivity : Activity() {
             "stop" -> "Okay. You can close this screen whenever you're ready."
             else -> {
                 if (!AiProviderClient.hasKey(this)) {
-                    "No AI key configured. Tap Configure AI, save your Gemini API key, then ask again."
+                    "No API key configured for ${AiProviderClient.activeProvider(this).label}. Tap Configure AI, choose a provider, and save its API key."
                 } else {
                     askAi(command.argument)
                     "Thinking… I'll reply here when the AI responds."
@@ -182,29 +184,88 @@ class MainActivity : Activity() {
     }
 
     private fun configureAi() {
-        val input = EditText(this).apply {
-            hint = "Paste your Gemini API key"
+        val providers = AiProviderClient.providers
+        val activeId = AiProviderClient.activeProviderId(this)
+        val providerSpinner = Spinner(this).apply {
+            adapter = ArrayAdapter(
+                this@MainActivity,
+                android.R.layout.simple_spinner_dropdown_item,
+                providers.map { it.label }
+            )
+            setSelection(providers.indexOfFirst { it.id == activeId }.coerceAtLeast(0))
+        }
+        val keyInput = EditText(this).apply {
+            hint = "Paste API key for selected provider"
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
             setSingleLine(true)
         }
-        AlertDialog.Builder(this)
-            .setTitle("Configure AI")
-            .setMessage("Your key is encrypted with Android Keystore and stored on this device. It is not committed to GitHub.")
-            .setView(input)
-            .setPositiveButton("Save key") { _, _ ->
-                val key = input.text.toString().trim()
-                if (key.isNotBlank()) {
-                    try {
-                        SecureKeyStore.saveGeminiKey(this, key)
-                        Toast.makeText(this, "AI key saved securely on this device.", Toast.LENGTH_LONG).show()
-                    } catch (_: Exception) {
-                        Toast.makeText(this, "Couldn't securely save that key.", Toast.LENGTH_LONG).show()
-                    }
+        val status = TextView(this).apply {
+            val provider = providers.first { it.id == activeId }
+            text = if (SecureKeyStore.getProviderKey(this@MainActivity, provider.id).isNullOrBlank()) {
+                "No key saved for ${provider.label}. Keys are stored separately for each provider."
+            } else {
+                "A key is saved for ${provider.label}. Enter a new key only if you want to replace it."
+            }
+            textSize = 13f
+            setPadding(0, dp(8), 0, dp(8))
+        }
+        providerSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
+            override fun onItemSelected(
+                parent: android.widget.AdapterView<*>?,
+                view: android.view.View?,
+                position: Int,
+                id: Long
+            ) {
+                val provider = providers[position]
+                status.text = if (SecureKeyStore.getProviderKey(this@MainActivity, provider.id).isNullOrBlank()) {
+                    "No key saved for ${provider.label}. Keys are stored separately for each provider."
+                } else {
+                    "A key is saved for ${provider.label}. Enter a new key only if you want to replace it."
                 }
             }
-            .setNeutralButton("Remove key") { _, _ ->
-                SecureKeyStore.clearGeminiKey(this)
-                Toast.makeText(this, "Saved AI key removed.", Toast.LENGTH_SHORT).show()
+        }
+        val dialogContent = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(22), dp(8), dp(22), 0)
+            addView(TextView(this@MainActivity).apply {
+                text = "AI provider"
+                textSize = 14f
+            })
+            addView(providerSpinner, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ))
+            addView(status, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ))
+            addView(keyInput, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ))
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Configure AI")
+            .setMessage("Choose the provider that matches your API key. A Groq key will not work with Gemini, and a Gemini key will not work with Groq. Keys are encrypted with Android Keystore and stored on this device.")
+            .setView(dialogContent)
+            .setPositiveButton("Save / use provider") { _, _ ->
+                val provider = providers[providerSpinner.selectedItemPosition.coerceIn(0, providers.lastIndex)]
+                val key = keyInput.text.toString().trim()
+                try {
+                    if (key.isNotBlank()) SecureKeyStore.saveProviderKey(this, provider.id, key)
+                    AiProviderClient.setActiveProvider(this, provider.id)
+                    if (SecureKeyStore.getProviderKey(this, provider.id).isNullOrBlank()) {
+                        Toast.makeText(this, "Selected ${provider.label}. Add its API key before sending AI requests.", Toast.LENGTH_LONG).show()
+                    } else {
+                        Toast.makeText(this, "${provider.label} is selected. Its API key is stored securely on this device.", Toast.LENGTH_LONG).show()
+                    }
+                } catch (_: Exception) {
+                    Toast.makeText(this, "Couldn't securely save or select this provider.", Toast.LENGTH_LONG).show()
+                }
+            }
+            .setNeutralButton("Remove selected key") { _, _ ->
+                val provider = providers[providerSpinner.selectedItemPosition.coerceIn(0, providers.lastIndex)]
+                SecureKeyStore.clearProviderKey(this, provider.id)
+                Toast.makeText(this, "Saved key for ${provider.label} removed.", Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton("Cancel", null)
             .show()
@@ -213,7 +274,7 @@ class MainActivity : Activity() {
     private fun askAi(prompt: String) {
         if (!AiProviderClient.hasKey(this)) {
             runOnUiThread {
-                transcript.text = "Assistant: No AI key is configured yet. Tap Configure AI and add your Gemini API key."
+                transcript.text = "Assistant: No API key is configured for ${AiProviderClient.activeProvider(this).label}. Tap Configure AI and save a key for that provider."
             }
             return
         }
