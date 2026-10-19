@@ -14,7 +14,7 @@ This is a native Android app, not a desktop Python process copied onto a phone. 
 | `action_engine.py`, `app_controller.py` | `MainActivity.kt` and `AssistantAccessibilityService.kt` — Android app launch, URLs, navigation, text and visible-label actions |
 | `listener.py` | Android speech-recognition intent from the app screen; continuous wake-word listening is not implemented yet |
 | `voice.py`, `TTS.py` | Android speech output is not connected yet |
-| `ai_engine.py` | Preserved as reference; `AiProviderClient.kt` now ports the Gemini provider flow with device-encrypted key storage |
+| `ai_engine.py` | Preserved as reference; `AiProviderClient.kt` supports Gemini, Groq, and OpenRouter with per-provider device-encrypted key storage |
 | `permissions.py` | Android runtime microphone permission and explicit manual Accessibility enablement |
 | `database.py`, memory modules | Not migrated to persistent memory yet |
 
@@ -26,7 +26,7 @@ This is a native Android app, not a desktop Python process copied onto a phone. 
 - User-initiated visible-label tap, focused-field text entry, screen text reading, Back and Home actions
 - Time, date and battery queries
 - Android Text-to-Speech responses
-- Gemini AI fallback after the user configures their own API key in the app
+- AI fallback through the selected Gemini, Groq, or OpenRouter provider after the user configures a provider-specific API key in the app
 - App assistance can be disabled in Android Accessibility settings
 
 ## Security and portability
