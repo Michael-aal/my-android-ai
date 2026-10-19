@@ -162,8 +162,12 @@ class MainActivity : Activity() {
             "battery" -> batteryStatus()
             "stop" -> "Okay. You can close this screen whenever you're ready."
             else -> {
-                askAi(command.argument)
-                "Thinking… I'll reply here when the AI responds."
+                if (!AiProviderClient.hasKey(this)) {
+                    "No AI key configured. Tap Configure AI, save your Gemini key, then ask again."
+                } else {
+                    askAi(command.argument)
+                    "Thinking… I'll reply here when the AI responds."
+                }
             }
         }
         transcript.text = "You: $raw\n\nAssistant: $response"
