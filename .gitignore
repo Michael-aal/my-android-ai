@@ -1,0 +1,32 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.keystore
+*.jks
+local.properties
+
+# Python local state
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local databases, memories and recordings
+*.db
+*.sqlite
+*.sqlite3
+memory.json
+recorded.wav
+temp.wav
+audio/
+storage/.secret
+
+# Android/Gradle outputs
+.gradle/
+build/
+**/build/
+.idea/
+*.iml
+.DS_Store
