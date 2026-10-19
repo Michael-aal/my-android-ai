@@ -15,6 +15,26 @@ android {
         versionName = "0.1.0"
     }
 
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("safe") {
+            dimension = "distribution"
+            applicationIdSuffix = ".safe"
+            versionNameSuffix = "-safe"
+            buildConfigField("boolean", "ACCESSIBILITY_ASSISTANCE_ENABLED", "false")
+        }
+        create("fullControl") {
+            dimension = "distribution"
+            applicationIdSuffix = ".fullcontrol"
+            versionNameSuffix = "-full-control"
+            buildConfigField("boolean", "ACCESSIBILITY_ASSISTANCE_ENABLED", "true")
+        }
+    }
+
+    buildFeatures {
+        buildConfig = true
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

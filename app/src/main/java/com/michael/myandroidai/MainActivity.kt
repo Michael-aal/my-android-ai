@@ -22,11 +22,7 @@ import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
 
-/**
- * Android-native front end for the original my_ai intent/action architecture.
- * Platform-specific Windows actions are replaced by Android intents and
- * explicitly user-enabled AccessibilityService operations.
- */
+/** Android-native front end for the original my_ai intent/action architecture. */
 class MainActivity : Activity() {
     private lateinit var transcript: TextView
     private lateinit var commandInput: EditText
@@ -92,7 +88,11 @@ class MainActivity : Activity() {
         })
 
         transcript = TextView(this).apply {
-            text = "Ready. Try “open WhatsApp”, “open youtube.com”, “what time is it”, or “help”.\n\nFor on-screen app assistance, manually enable My Android AI in Android Accessibility settings."
+            text = if (BuildConfig.ACCESSIBILITY_ASSISTANCE_ENABLED) {
+                "Ready. Try “open WhatsApp”, “open youtube.com”, “what time is it”, or “help”.\n\nCross-app assistance is included in this full-control build and requires explicit activation in Android Accessibility settings."
+            } else {
+                "Ready. Try “open WhatsApp”, “open youtube.com”, “what time is it”, or “help”.\n\nThis safer sideload build does not include cross-app screen reading, tapping, typing, or global navigation."
+            }
             textSize = 15f
             setTextColor(white)
             setPadding(dp(16), dp(18), dp(16), dp(18))
@@ -127,12 +127,14 @@ class MainActivity : Activity() {
             text = "Configure AI"
             setOnClickListener { configureAi() }
         }, fullWidthButton())
-        root.addView(Button(this).apply {
-            text = "Set up app assistance"
-            setOnClickListener {
-                startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
-            }
-        }, fullWidthButton())
+        if (BuildConfig.ACCESSIBILITY_ASSISTANCE_ENABLED) {
+            root.addView(Button(this).apply {
+                text = "Set up app assistance"
+                setOnClickListener {
+                    startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                }
+            }, fullWidthButton())
+        }
         setContentView(root)
     }
 
@@ -142,20 +144,24 @@ class MainActivity : Activity() {
             Toast.makeText(this, "Type or say a command first.", Toast.LENGTH_SHORT).show()
             return
         }
+        val accessibilityUnavailable = "Cross-app assistance isn't included in this safer sideload build."
         val response = when (command.action) {
-            "help" -> "Try “open WhatsApp”, “open Chrome”, “open youtube.com”, “what time is it”, “what is the date”, “battery”, “back”, “home”, or “read screen”.\n\nAI-provider integration is not yet connected to a secure API backend."
+            "help" -> if (BuildConfig.ACCESSIBILITY_ASSISTANCE_ENABLED)
+                "Try opening apps or websites, time, date, battery, back, home, read screen, tap visible labels, or type into a focused field."
+            else
+                "Try opening apps or websites, time, date, battery, voice input, or ask the configured AI."
             "open_app" -> openApp(command.argument)
             "open_url" -> openUrl(command.argument)
             "settings" -> launchSettings(false)
-            "accessibility_settings" -> launchSettings(true)
-            "back" -> if (AssistantAccessibilityService.activeService?.goBack() == true) "Back action sent." else "Accessibility assistance is not active. Enable My Android AI in Accessibility settings first."
-            "home" -> if (AssistantAccessibilityService.activeService?.goHome() == true) "Home action sent." else "Accessibility assistance is not active. Enable it in Accessibility settings first."
-            "tap_text" -> if (AssistantAccessibilityService.activeService?.clickVisibleText(command.argument) == true) "Tapped “${command.argument}”." else "I couldn't tap that label. Make sure the target app is currently visible and accessibility assistance is enabled."
-            "type_text" -> if (AssistantAccessibilityService.activeService?.setFocusedText(command.argument) == true) "Typed the requested text into the focused field." else "I couldn't type into a focused field. Open the target app and select its text field first."
-            "read_screen" -> {
+            "accessibility_settings" -> if (BuildConfig.ACCESSIBILITY_ASSISTANCE_ENABLED) launchSettings(true) else accessibilityUnavailable
+            "back" -> if (!BuildConfig.ACCESSIBILITY_ASSISTANCE_ENABLED) accessibilityUnavailable else if (AssistantAccessibilityService.activeService?.goBack() == true) "Back action sent." else "Accessibility assistance is not active. Enable My Android AI in Accessibility settings first."
+            "home" -> if (!BuildConfig.ACCESSIBILITY_ASSISTANCE_ENABLED) accessibilityUnavailable else if (AssistantAccessibilityService.activeService?.goHome() == true) "Home action sent." else "Accessibility assistance is not active. Enable it in Accessibility settings first."
+            "tap_text" -> if (!BuildConfig.ACCESSIBILITY_ASSISTANCE_ENABLED) accessibilityUnavailable else if (AssistantAccessibilityService.activeService?.clickVisibleText(command.argument) == true) "Tapped “${command.argument}”." else "I couldn't tap that label. Make sure the target app is visible and assistance is enabled."
+            "type_text" -> if (!BuildConfig.ACCESSIBILITY_ASSISTANCE_ENABLED) accessibilityUnavailable else if (AssistantAccessibilityService.activeService?.setFocusedText(command.argument) == true) "Typed the requested text into the focused field." else "I couldn't type into a focused field. Select the destination text field first."
+            "read_screen" -> if (!BuildConfig.ACCESSIBILITY_ASSISTANCE_ENABLED) accessibilityUnavailable else {
                 val lines = AssistantAccessibilityService.activeService?.visibleTextSnapshot().orEmpty()
                 if (lines.isEmpty()) "No visible text available. Make sure the target app is in the foreground and accessibility assistance is enabled."
-                else "Visible screen text:\n" + lines.take(35).joinToString("\n")
+                else "Visible screen text:\\n" + lines.take(35).joinToString("\\n")
             }
             "time" -> "The time is " + DateFormat.getTimeInstance(DateFormat.SHORT).format(Date())
             "date" -> "Today is " + DateFormat.getDateInstance(DateFormat.FULL).format(Date())
@@ -163,7 +169,7 @@ class MainActivity : Activity() {
             "stop" -> "Okay. You can close this screen whenever you're ready."
             else -> {
                 if (!AiProviderClient.hasKey(this)) {
-                    "No AI key configured. Tap Configure AI, save your Gemini key, then ask again."
+                    "No AI key configured. Tap Configure AI, save your Gemini API key, then ask again."
                 } else {
                     askAi(command.argument)
                     "Thinking… I'll reply here when the AI responds."
@@ -231,8 +237,6 @@ class MainActivity : Activity() {
                 return "Opening $name."
             }
         }
-
-        // Resolve installed launcher apps by visible app label; no hidden app inventory is uploaded.
         val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
         val matches = packageManager.queryIntentActivities(launcherIntent, 0)
         val match = matches.firstOrNull {
