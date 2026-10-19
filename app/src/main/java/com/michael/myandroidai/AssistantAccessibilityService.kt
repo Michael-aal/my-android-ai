@@ -241,7 +241,20 @@ class AssistantAccessibilityService : AccessibilityService() {
                 if (level in 0..100) "Battery: $level%" else "Battery level unavailable."
             }
             "stop" -> { renderCollapsedPanel(); "Assistant minimized." }
-            else -> "I received “${cmd.argument}”. AI reasoning is not connected yet."
+            else -> {
+                if (!AiProviderClient.hasKey(this)) {
+                    "No AI key configured. Open My Android AI and tap Configure AI first."
+                } else {
+                    AiProviderClient.ask(this, cmd.argument) { result ->
+                        val answer = result.getOrElse { "AI request failed: ${it.message ?: "unknown error"}" }
+                        responseLabel?.post {
+                            responseLabel?.text = answer
+                            textToSpeech?.speak(answer, TextToSpeech.QUEUE_FLUSH, null, "assistant-ai-reply")
+                        }
+                    }
+                    "Thinking…"
+                }
+            }
         }
     }
 
