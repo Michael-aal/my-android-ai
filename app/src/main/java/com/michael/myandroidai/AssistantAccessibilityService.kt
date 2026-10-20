@@ -36,6 +36,7 @@ class AssistantAccessibilityService : AccessibilityService() {
 
     private var windowManager: WindowManager? = null
     private var overlay: LinearLayout? = null
+    private var overlayParams: WindowManager.LayoutParams? = null
     private var commandField: EditText? = null
     private var responseLabel: TextView? = null
     private var expanded = true
@@ -59,6 +60,11 @@ class AssistantAccessibilityService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        if (!BuildConfig.ACCESSIBILITY_ASSISTANCE_ENABLED) {
+            // The safer distribution must never expose cross-app controls.
+            disableSelf()
+            return
+        }
         activeService = this
         textToSpeech = TextToSpeech(this) { status ->
             if (status == TextToSpeech.SUCCESS) textToSpeech?.language = Locale.getDefault()
@@ -118,25 +124,34 @@ class AssistantAccessibilityService : AccessibilityService() {
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
         val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(12), dp(10), dp(12), dp(10))
-            setBackgroundColor(Color.rgb(18, 28, 24))
+            setPadding(dp(8), dp(8), dp(8), dp(8))
+            background = android.graphics.drawable.GradientDrawable().apply {
+                setColor(Color.rgb(18, 28, 40))
+                cornerRadius = dp(24).toFloat()
+                setStroke(dp(1), Color.rgb(83, 210, 157))
+            }
         }
         overlay = panel
-        renderExpandedPanel()
-        val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
+        val displayWidth = resources.displayMetrics.widthPixels
+        overlayParams = WindowManager.LayoutParams(
+            dp(60),
+            dp(60),
             WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.TOP
-            y = dp(24)
+            gravity = Gravity.TOP or Gravity.LEFT
+            x = (displayWidth - dp(76)).coerceAtLeast(dp(8))
+            y = dp(180)
         }
+        renderCollapsedPanel()
         try {
-            windowManager?.addView(panel, params)
+            windowManager?.addView(panel, overlayParams)
         } catch (_: Exception) {
             overlay = null
+            overlayParams = null
         }
     }
 
@@ -144,6 +159,13 @@ class AssistantAccessibilityService : AccessibilityService() {
         val panel = overlay ?: return
         expanded = true
         panel.removeAllViews()
+        panel.background = android.graphics.drawable.GradientDrawable().apply {
+            setColor(Color.rgb(18, 28, 40))
+            cornerRadius = dp(18).toFloat()
+            setStroke(dp(1), Color.rgb(83, 210, 157))
+        }
+        overlayParams?.let { it.width = dp(320); it.height = WindowManager.LayoutParams.WRAP_CONTENT }
+        updateOverlayLayout()
         panel.addView(TextView(this).apply {
             text = "MY ANDROID AI   •   Type a command"
             textSize = 14f
@@ -196,20 +218,78 @@ class AssistantAccessibilityService : AccessibilityService() {
         val panel = overlay ?: return
         expanded = false
         panel.removeAllViews()
-        panel.addView(Button(this).apply {
-            text = "Open My Android AI"
+        panel.background = android.graphics.drawable.GradientDrawable().apply {
+            setColor(Color.rgb(18, 28, 40))
+            cornerRadius = dp(30).toFloat()
+            setStroke(dp(2), Color.rgb(83, 210, 157))
+        }
+        panel.addView(TextView(this).apply {
+            text = "✦"
+            textSize = 28f
+            gravity = Gravity.CENTER
+            setTextColor(Color.rgb(110, 231, 255))
+            contentDescription = "Open My Android AI assistant"
             setOnClickListener { renderExpandedPanel() }
-        })
-        updateOverlayFlags(focusable = false)
+            setOnTouchListener(object : android.view.View.OnTouchListener {
+                private var downRawX = 0f
+                private var downRawY = 0f
+                private var startX = 0
+                private var startY = 0
+                private var moved = false
+                override fun onTouch(view: android.view.View, event: android.view.MotionEvent): Boolean {
+                    val params = overlayParams ?: return false
+                    when (event.action) {
+                        android.view.MotionEvent.ACTION_DOWN -> {
+                            downRawX = event.rawX
+                            downRawY = event.rawY
+                            startX = params.x
+                            startY = params.y
+                            moved = false
+                            return true
+                        }
+                        android.view.MotionEvent.ACTION_MOVE -> {
+                            val dx = (event.rawX - downRawX).toInt()
+                            val dy = (event.rawY - downRawY).toInt()
+                            if (kotlin.math.abs(dx) > dp(4) || kotlin.math.abs(dy) > dp(4)) moved = true
+                            if (moved) {
+                                params.x = (startX + dx).coerceIn(0, (resources.displayMetrics.widthPixels - dp(60)).coerceAtLeast(0))
+                                params.y = (startY + dy).coerceAtLeast(0)
+                                updateOverlayLayout()
+                            }
+                            return true
+                        }
+                        android.view.MotionEvent.ACTION_UP -> {
+                            if (!moved) renderExpandedPanel()
+                            return true
+                        }
+                    }
+                    return false
+                }
+            })
+        }, LinearLayout.LayoutParams(dp(60), dp(60)))
+        overlayParams?.let {
+            it.width = dp(60)
+            it.height = dp(60)
+            it.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+        }
+        updateOverlayLayout()
     }
 
     private fun updateOverlayFlags(focusable: Boolean) {
-        val panel = overlay ?: return
-        val params = panel.layoutParams as? WindowManager.LayoutParams ?: return
+        val params = overlayParams ?: return
         params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
             WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
             (if (focusable) 0 else WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
-        try { windowManager?.updateViewLayout(panel, params) } catch (_: Exception) { }
+        updateOverlayLayout()
+    }
+
+    private fun updateOverlayLayout() {
+        val panel = overlay ?: return
+        val params = overlayParams ?: return
+        try {
+            if (panel.isAttachedToWindow) windowManager?.updateViewLayout(panel, params)
+        } catch (_: Exception) { }
     }
 
     fun runCommandFromOverlay(raw: String): String {
@@ -223,9 +303,22 @@ class AssistantAccessibilityService : AccessibilityService() {
         val cmd = AssistantCommandRouter.parse(raw)
         if (cmd.action == "empty") return "Type a command first."
         return when (cmd.action) {
-            "help" -> "Try open an app/site, tap a visible label, type text, back, home, read screen, time, date or battery."
+            "help" -> "Try “search weather in Lagos”, open an app/site, tap a visible label, type text, back, home, read screen, time, date or battery."
             "open_app" -> launchApp(cmd.argument)
             "open_url" -> openUrl(cmd.argument)
+            "search" -> {
+                if (cmd.argument.isBlank()) "What would you like me to search for?"
+                else {
+                    SearchPreferences.search(this, cmd.argument) { query ->
+                        val intent = Intent(this, MainActivity::class.java)
+                            .setAction("com.michael.myandroidai.ACTION_SEARCH")
+                            .putExtra("search_query", query)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                        startActivity(intent)
+                    }
+                    "Searching for: ${cmd.argument}"
+                }
+            }
             "back" -> if (goBack()) "Back action sent." else "Back action failed."
             "home" -> if (goHome()) "Home action sent." else "Home action failed."
             "settings" -> openSettings(false)
@@ -333,6 +426,7 @@ class AssistantAccessibilityService : AccessibilityService() {
         val current = overlay ?: return
         try { windowManager?.removeView(current) } catch (_: Exception) { }
         overlay = null
+        overlayParams = null
         commandField = null
         responseLabel = null
     }

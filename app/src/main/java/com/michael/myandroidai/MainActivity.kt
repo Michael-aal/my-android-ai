@@ -58,6 +58,19 @@ class MainActivity : Activity() {
             if (status == TextToSpeech.SUCCESS) textToSpeech?.language = Locale.getDefault()
         }
         buildInterface()
+        if (intent?.action == "com.michael.myandroidai.ACTION_SEARCH") {
+            val query = intent.getStringExtra("search_query").orEmpty()
+            if (query.isNotBlank()) SearchPreferences.showSearchChoice(this, query, rememberChoice = false)
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent?.action == "com.michael.myandroidai.ACTION_SEARCH") {
+            val query = intent.getStringExtra("search_query").orEmpty()
+            if (query.isNotBlank()) SearchPreferences.showSearchChoice(this, query, rememberChoice = false)
+        }
     }
 
     private fun buildInterface() {
@@ -157,7 +170,7 @@ class MainActivity : Activity() {
 
         transcript = TextView(this).apply {
             text = if (BuildConfig.ACCESSIBILITY_ASSISTANCE_ENABLED) {
-                "You're all set. ✦\n\nTry “open WhatsApp”, “open youtube.com”, “what time is it”, or “help”.\n\nCross-app assistance is included in this full-control build and requires explicit activation in Android Accessibility settings."
+                "You're all set. ✦\n\nTry “open WhatsApp”, “search weather in Lagos”, “open youtube.com”, “what time is it”, or “help”.\n\nCross-app assistance is included in this full-control build and requires explicit activation in Android Accessibility settings."
             } else {
                 "You're all set. ✦\n\nTry “open WhatsApp”, “open youtube.com”, “what time is it”, or “help”.\n\nThis safer sideload build can open apps and websites, handle voice input, and use your configured AI."
             }
@@ -225,6 +238,8 @@ class MainActivity : Activity() {
         }
         actions.addView(actionButton("◉  Speak", accent) { startVoiceInput() },
             LinearLayout.LayoutParams(0, dp(46), 1f).apply { rightMargin = dp(6) })
+        actions.addView(actionButton("⌕  Search settings", purple) { configureSearch() },
+            LinearLayout.LayoutParams(0, dp(46), 1f).apply { rightMargin = dp(6) })
         actions.addView(actionButton("⚙  Configure AI", purple) { configureAi() },
             LinearLayout.LayoutParams(0, dp(46), 1f).apply { leftMargin = dp(6) })
         root.addView(actions, LinearLayout.LayoutParams(
@@ -256,11 +271,20 @@ class MainActivity : Activity() {
         val accessibilityUnavailable = "Cross-app assistance isn't included in this safer sideload build."
         val response = when (command.action) {
             "help" -> if (BuildConfig.ACCESSIBILITY_ASSISTANCE_ENABLED)
-                "Try opening apps or websites, time, date, battery, back, home, read screen, tap visible labels, or type into a focused field."
+                "Try searching the web, opening apps or websites, time, date, battery, back, home, reading the screen, tapping visible labels, or typing into a focused field."
             else
-                "Try opening apps or websites, time, date, battery, voice input, or ask the configured AI."
+                "Try searching the web, opening apps or websites, time, date, battery, voice input, or ask the configured AI."
             "open_app" -> openApp(command.argument)
             "open_url" -> openUrl(command.argument)
+            "search" -> {
+                if (command.argument.isBlank()) "What would you like me to search for?"
+                else {
+                    SearchPreferences.search(this, command.argument) { query ->
+                        SearchPreferences.showSearchChoice(this, query, rememberChoice = false)
+                    }
+                    "Searching for: ${command.argument}"
+                }
+            }
             "settings" -> launchSettings(false)
             "accessibility_settings" -> if (BuildConfig.ACCESSIBILITY_ASSISTANCE_ENABLED) launchSettings(true) else accessibilityUnavailable
             "back" -> if (!BuildConfig.ACCESSIBILITY_ASSISTANCE_ENABLED) accessibilityUnavailable else if (AssistantAccessibilityService.activeService?.goBack() == true) "Back action sent." else "Accessibility assistance is not active. Enable My Android AI in Accessibility settings first."
@@ -288,6 +312,31 @@ class MainActivity : Activity() {
         transcript.text = "You: $raw\n\nAssistant: $response"
         textToSpeech?.speak(response, TextToSpeech.QUEUE_FLUSH, null, "assistant-response")
         commandInput.text.clear()
+    }
+
+
+    private fun configureSearch() {
+        val options = SearchPreferences.options
+        val current = SearchPreferences.selectedEngine(this)
+        val spinner = Spinner(this).apply {
+            adapter = ArrayAdapter(
+                this@MainActivity,
+                android.R.layout.simple_spinner_dropdown_item,
+                options.map { it.label }
+            )
+            setSelection(options.indexOfFirst { it.id == current }.coerceAtLeast(0))
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Search preferences")
+            .setMessage("Choose where commands like “search weather in Lagos” should go. Browser options use your Android default browser; Google app uses the Google app when available.")
+            .setView(spinner)
+            .setPositiveButton("Save") { _, _ ->
+                val option = options[spinner.selectedItemPosition.coerceIn(0, options.lastIndex)]
+                SearchPreferences.saveEngine(this, option.id)
+                Toast.makeText(this, "Search preference saved: ${option.label}", Toast.LENGTH_LONG).show()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun configureAi() {
