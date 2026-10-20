@@ -58,6 +58,19 @@ class MainActivity : Activity() {
             if (status == TextToSpeech.SUCCESS) textToSpeech?.language = Locale.getDefault()
         }
         buildInterface()
+        if (intent?.action == "com.michael.myandroidai.ACTION_SEARCH") {
+            val query = intent.getStringExtra("search_query").orEmpty()
+            if (query.isNotBlank()) SearchPreferences.showSearchChoice(this, query, rememberChoice = false)
+        }
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent?.action == "com.michael.myandroidai.ACTION_SEARCH") {
+            val query = intent.getStringExtra("search_query").orEmpty()
+            if (query.isNotBlank()) SearchPreferences.showSearchChoice(this, query, rememberChoice = false)
+        }
     }
 
     private fun buildInterface() {
@@ -225,6 +238,8 @@ class MainActivity : Activity() {
         }
         actions.addView(actionButton("◉  Speak", accent) { startVoiceInput() },
             LinearLayout.LayoutParams(0, dp(46), 1f).apply { rightMargin = dp(6) })
+        actions.addView(actionButton("⌕  Search settings", purple) { configureSearch() },
+            LinearLayout.LayoutParams(0, dp(46), 1f).apply { rightMargin = dp(6) })
         actions.addView(actionButton("⚙  Configure AI", purple) { configureAi() },
             LinearLayout.LayoutParams(0, dp(46), 1f).apply { leftMargin = dp(6) })
         root.addView(actions, LinearLayout.LayoutParams(
@@ -261,6 +276,15 @@ class MainActivity : Activity() {
                 "Try opening apps or websites, time, date, battery, voice input, or ask the configured AI."
             "open_app" -> openApp(command.argument)
             "open_url" -> openUrl(command.argument)
+            "search" -> {
+                if (command.argument.isBlank()) "What would you like me to search for?"
+                else {
+                    SearchPreferences.search(this, command.argument) { query ->
+                        SearchPreferences.showSearchChoice(this, query, rememberChoice = false)
+                    }
+                    "Searching for: ${command.argument}"
+                }
+            }
             "settings" -> launchSettings(false)
             "accessibility_settings" -> if (BuildConfig.ACCESSIBILITY_ASSISTANCE_ENABLED) launchSettings(true) else accessibilityUnavailable
             "back" -> if (!BuildConfig.ACCESSIBILITY_ASSISTANCE_ENABLED) accessibilityUnavailable else if (AssistantAccessibilityService.activeService?.goBack() == true) "Back action sent." else "Accessibility assistance is not active. Enable My Android AI in Accessibility settings first."
@@ -288,6 +312,31 @@ class MainActivity : Activity() {
         transcript.text = "You: $raw\n\nAssistant: $response"
         textToSpeech?.speak(response, TextToSpeech.QUEUE_FLUSH, null, "assistant-response")
         commandInput.text.clear()
+    }
+
+
+    private fun configureSearch() {
+        val options = SearchPreferences.options
+        val current = SearchPreferences.selectedEngine(this)
+        val spinner = Spinner(this).apply {
+            adapter = ArrayAdapter(
+                this@MainActivity,
+                android.R.layout.simple_spinner_dropdown_item,
+                options.map { it.label }
+            )
+            setSelection(options.indexOfFirst { it.id == current }.coerceAtLeast(0))
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Search preferences")
+            .setMessage("Choose where commands like “search weather in Lagos” should go. Browser options use your Android default browser; Google app uses the Google app when available.")
+            .setView(spinner)
+            .setPositiveButton("Save") { _, _ ->
+                val option = options[spinner.selectedItemPosition.coerceIn(0, options.lastIndex)]
+                SearchPreferences.saveEngine(this, option.id)
+                Toast.makeText(this, "Search preference saved: ${option.label}", Toast.LENGTH_LONG).show()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun configureAi() {
