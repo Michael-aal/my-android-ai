@@ -306,6 +306,19 @@ class AssistantAccessibilityService : AccessibilityService() {
             "help" -> "Try open an app/site, tap a visible label, type text, back, home, read screen, time, date or battery."
             "open_app" -> launchApp(cmd.argument)
             "open_url" -> openUrl(cmd.argument)
+            "search" -> {
+                if (cmd.argument.isBlank()) "What would you like me to search for?"
+                else {
+                    SearchPreferences.search(this, cmd.argument) { query ->
+                        val intent = Intent(this, MainActivity::class.java)
+                            .setAction("com.michael.myandroidai.ACTION_SEARCH")
+                            .putExtra("search_query", query)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                        startActivity(intent)
+                    }
+                    "Searching for: ${cmd.argument}"
+                }
+            }
             "back" -> if (goBack()) "Back action sent." else "Back action failed."
             "home" -> if (goHome()) "Home action sent." else "Home action failed."
             "settings" -> openSettings(false)
