@@ -196,7 +196,7 @@ class AssistantAccessibilityService : AccessibilityService() {
         overlayParams?.let { it.width = dp(320); it.height = WindowManager.LayoutParams.WRAP_CONTENT }
         updateOverlayLayout()
         panel.addView(TextView(this).apply {
-            text = "${RobotPreferences.name(this)}   •   Ready to help"
+            text = "${RobotPreferences.name(this@AssistantAccessibilityService)}   •   Ready to help"
             textSize = 14f
             setTextColor(Color.rgb(83, 210, 157))
         })
