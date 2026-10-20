@@ -61,6 +61,8 @@ class MainActivity : Activity() {
         if (intent?.action == "com.michael.myandroidai.ACTION_SEARCH") {
             val query = intent.getStringExtra("search_query").orEmpty()
             if (query.isNotBlank()) SearchPreferences.showSearchChoice(this, query, rememberChoice = false)
+        } else if (intent?.action == "com.michael.myandroidai.ACTION_ROBOT_SETTINGS") {
+            showRobotSettingsDialog()
         }
     }
 
@@ -70,7 +72,42 @@ class MainActivity : Activity() {
         if (intent?.action == "com.michael.myandroidai.ACTION_SEARCH") {
             val query = intent.getStringExtra("search_query").orEmpty()
             if (query.isNotBlank()) SearchPreferences.showSearchChoice(this, query, rememberChoice = false)
+        } else if (intent?.action == "com.michael.myandroidai.ACTION_ROBOT_SETTINGS") {
+            showRobotSettingsDialog()
         }
+    }
+
+    private fun showRobotSettingsDialog() {
+        val nameField = EditText(this).apply {
+            setSingleLine(true)
+            hint = "Robot name"
+            setText(RobotPreferences.name(this@MainActivity))
+            setSelection(text.length)
+        }
+        val moveToggle = android.widget.CheckBox(this).apply {
+            text = "Move gently around the screen"
+            isChecked = RobotPreferences.autoMove(this@MainActivity)
+        }
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(8), dp(20), dp(4))
+            addView(TextView(this@MainActivity).apply {
+                text = "Choose a name and movement style for your floating robot."
+                setTextColor(android.graphics.Color.WHITE)
+            })
+            addView(nameField)
+            addView(moveToggle)
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Robot companion")
+            .setView(content)
+            .setPositiveButton("Save") { _, _ ->
+                RobotPreferences.setName(this, nameField.text.toString())
+                RobotPreferences.setAutoMove(this, moveToggle.isChecked)
+                Toast.makeText(this, "Saved settings for ${RobotPreferences.name(this)}", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun buildInterface() {

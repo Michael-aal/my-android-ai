@@ -1,9 +1,12 @@
 package com.michael.myandroidai
 
 import android.accessibilityservice.AccessibilityService
+import android.app.AlertDialog
 import android.content.Intent
 import android.net.Uri
 import android.os.BatteryManager
+import android.os.Handler
+import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.view.Gravity
 import android.view.WindowManager
@@ -37,10 +40,34 @@ class AssistantAccessibilityService : AccessibilityService() {
     private var windowManager: WindowManager? = null
     private var overlay: LinearLayout? = null
     private var overlayParams: WindowManager.LayoutParams? = null
+    private var robotFaceView: RobotFaceView? = null
     private var commandField: EditText? = null
     private var responseLabel: TextView? = null
     private var expanded = true
     private var textToSpeech: TextToSpeech? = null
+    private val movementHandler = Handler(Looper.getMainLooper())
+    private var movementDirection = 1
+    private var movementPhase = 0
+    private val movementRunnable = object : Runnable {
+        override fun run() {
+            if (RobotPreferences.autoMove(this@AssistantAccessibilityService) && !expanded) {
+                val params = overlayParams
+                if (params != null) {
+                    val maxX = (resources.displayMetrics.widthPixels - dp(60)).coerceAtLeast(0)
+                    params.x += movementDirection * dp(2)
+                    if (params.x >= maxX) { params.x = maxX; movementDirection = -1 }
+                    if (params.x <= 0) { params.x = 0; movementDirection = 1 }
+                    movementPhase = (movementPhase + 1) % 80
+                    if (movementPhase % 8 == 0) {
+                        params.y = (params.y + if (movementPhase < 40) dp(1) else -dp(1))
+                            .coerceIn(dp(70), (resources.displayMetrics.heightPixels - dp(100)).coerceAtLeast(dp(70)))
+                    }
+                    updateOverlayLayout()
+                }
+            }
+            movementHandler.postDelayed(this, 90L)
+        }
+    }
 
     private val appPackages = mapOf(
         "whatsapp" to "com.whatsapp",
@@ -70,9 +97,11 @@ class AssistantAccessibilityService : AccessibilityService() {
             if (status == TextToSpeech.SUCCESS) textToSpeech?.language = Locale.getDefault()
         }
         showAssistantOverlay()
+        movementHandler.postDelayed(movementRunnable, 90L)
     }
 
     override fun onDestroy() {
+        movementHandler.removeCallbacks(movementRunnable)
         if (activeService === this) activeService = null
         removeOverlay()
         textToSpeech?.stop()
@@ -167,7 +196,7 @@ class AssistantAccessibilityService : AccessibilityService() {
         overlayParams?.let { it.width = dp(320); it.height = WindowManager.LayoutParams.WRAP_CONTENT }
         updateOverlayLayout()
         panel.addView(TextView(this).apply {
-            text = "MY ANDROID AI   •   Type a command"
+            text = "${RobotPreferences.name(this@AssistantAccessibilityService)}   •   Ready to help"
             textSize = 14f
             setTextColor(Color.rgb(83, 210, 157))
         })
@@ -203,6 +232,10 @@ class AssistantAccessibilityService : AccessibilityService() {
             text = "Minimize"
             setOnClickListener { renderCollapsedPanel() }
         }, LinearLayout.LayoutParams(0, dp(44), 1f))
+        actions.addView(Button(this).apply {
+            text = "Robot"
+            setOnClickListener { showRobotSettings() }
+        }, LinearLayout.LayoutParams(0, dp(44), 1f))
         panel.addView(actions)
         responseLabel = TextView(this).apply {
             text = "Commands run only when you press Run."
@@ -223,12 +256,7 @@ class AssistantAccessibilityService : AccessibilityService() {
             cornerRadius = dp(30).toFloat()
             setStroke(dp(2), Color.rgb(83, 210, 157))
         }
-        panel.addView(TextView(this).apply {
-            text = "✦"
-            textSize = 28f
-            gravity = Gravity.CENTER
-            setTextColor(Color.rgb(110, 231, 255))
-            contentDescription = "Open My Android AI assistant"
+        robotFaceView = RobotFaceView(this).apply {
             setOnClickListener { renderExpandedPanel() }
             setOnTouchListener(object : android.view.View.OnTouchListener {
                 private var downRawX = 0f
@@ -266,7 +294,8 @@ class AssistantAccessibilityService : AccessibilityService() {
                     return false
                 }
             })
-        }, LinearLayout.LayoutParams(dp(60), dp(60)))
+        }
+        panel.addView(robotFaceView, LinearLayout.LayoutParams(dp(60), dp(60)))
         overlayParams?.let {
             it.width = dp(60)
             it.height = dp(60)
@@ -322,6 +351,16 @@ class AssistantAccessibilityService : AccessibilityService() {
             "back" -> if (goBack()) "Back action sent." else "Back action failed."
             "home" -> if (goHome()) "Home action sent." else "Home action failed."
             "settings" -> openSettings(false)
+            "robot_settings" -> { showRobotSettings(); "Opening robot settings." }
+            "robot_stay" -> {
+                RobotPreferences.setAutoMove(this, false)
+                "Okay, I'll stay right here."
+            }
+            "robot_move" -> {
+                RobotPreferences.setAutoMove(this, true)
+                "I'll move gently around the screen. Say stay when you want me to stop."
+            }
+            "robot_name" -> "My name is ${RobotPreferences.name(this)}."
             "accessibility_settings" -> openSettings(true)
             "tap_text" -> if (clickVisibleText(cmd.argument)) "Tapped “${cmd.argument}”." else "Couldn't find a clickable visible label: ${cmd.argument}"
             "type_text" -> if (setFocusedText(cmd.argument)) "Typed into the focused field." else "Couldn't find a focused text field. Tap the destination field first."
@@ -349,6 +388,13 @@ class AssistantAccessibilityService : AccessibilityService() {
                 }
             }
         }
+    }
+
+    private fun showRobotSettings() {
+        val intent = Intent(this, MainActivity::class.java)
+            .setAction("com.michael.myandroidai.ACTION_ROBOT_SETTINGS")
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        startActivity(intent)
     }
 
     private fun launchApp(rawName: String): String {
@@ -427,6 +473,7 @@ class AssistantAccessibilityService : AccessibilityService() {
         try { windowManager?.removeView(current) } catch (_: Exception) { }
         overlay = null
         overlayParams = null
+        robotFaceView = null
         commandField = null
         responseLabel = null
     }
