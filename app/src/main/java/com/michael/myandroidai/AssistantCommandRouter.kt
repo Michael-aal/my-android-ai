@@ -23,6 +23,12 @@ object AssistantCommandRouter {
             normalized in setOf("what time is it", "time", "tell me the time", "current time") -> AssistantCommand("time")
             normalized in setOf("what is the date", "today's date", "today date", "date") -> AssistantCommand("date")
             normalized in setOf("battery", "check battery", "battery level") -> AssistantCommand("battery")
+            normalized == "search" || normalized == "search this" -> AssistantCommand("search", "")
+            normalized.startsWith("search the web for ") -> AssistantCommand("search", text.substringAfter("search the web for ", "").trim())
+            normalized.startsWith("search for ") -> AssistantCommand("search", text.substringAfter("search for ", "").trim())
+            normalized.startsWith("search ") -> AssistantCommand("search", text.substringAfter("search ", "").trim())
+            normalized.startsWith("look up ") -> AssistantCommand("search", text.substringAfter("look up ", "").trim())
+            normalized.startsWith("google ") -> AssistantCommand("search", text.substringAfter("google ", "").trim())
             normalized.startsWith("open ") -> {
                 val target = text.substringAfter(" ", "").trim()
                 if (target.startsWith("http://", true) || target.startsWith("https://", true) ||
