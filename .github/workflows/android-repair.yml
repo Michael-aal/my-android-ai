@@ -36,29 +36,28 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-
-      - name: Ensure Gradle wrapper is executable
+      - name: Install Gradle 8.9 (repository has no Gradle wrapper)
         run: |
-          if [ ! -f ./gradlew ]; then
-            echo "::error::Gradle wrapper ./gradlew is missing from the repository root."
-            exit 1
-          fi
-          chmod +x ./gradlew
+          set -euo pipefail
+          curl --fail --location --retry 3 https://services.gradle.org/distributions/gradle-8.9-bin.zip --output /tmp/gradle.zip
+          unzip -q /tmp/gradle.zip -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/gradle-8.9/bin" >> "$GITHUB_PATH"
+
+      - name: Verify Gradle installation
+        run: gradle --version
 
       - name: Clean generated outputs
         if: github.event_name != 'workflow_dispatch' || inputs.clean_build
-        run: ./gradlew --no-daemon clean
+        run: gradle --no-daemon clean
 
       - name: Compile all Android variants
-        run: ./gradlew --no-daemon assemble
+        run: gradle --no-daemon assemble
 
       - name: Run unit tests
-        run: ./gradlew --no-daemon test
+        run: gradle --no-daemon test
 
       - name: Run Android lint checks
-        run: ./gradlew --no-daemon lint
+        run: gradle --no-daemon lint
 
       - name: Upload diagnostic reports
         if: always()
