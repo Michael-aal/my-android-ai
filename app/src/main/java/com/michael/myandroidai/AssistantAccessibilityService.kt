@@ -332,7 +332,7 @@ class AssistantAccessibilityService : AccessibilityService() {
         val cmd = AssistantCommandRouter.parse(raw)
         if (cmd.action == "empty") return "Type a command first."
         return when (cmd.action) {
-            "help" -> "Try “search weather in Lagos”, open an app/site, tap a visible label, type text, back, home, read screen, time, date or battery."
+            "help" -> "Try “parallel: explain promises || plan revision” for up to three AI tasks at once, or search, open apps/sites, tap visible labels, type text, back, home, read screen, time, date or battery."
             "open_app" -> launchApp(cmd.argument)
             "open_url" -> openUrl(cmd.argument)
             "search" -> {
@@ -365,6 +365,8 @@ class AssistantAccessibilityService : AccessibilityService() {
                 val tasks = AssistantCommandRouter.splitParallelTasks(cmd.argument, maxTasks = 20)
                 if (tasks.isEmpty()) {
                     "Use: parallel: task one || task two || task three"
+                } else if (!AiProviderClient.hasKey(this)) {
+                    "No API key configured. Open My Android AI and tap Configure AI first."
                 } else {
                     ParallelTaskRunner.run(this, tasks) { update, finished ->
                         responseLabel?.post {
