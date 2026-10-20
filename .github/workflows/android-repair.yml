@@ -65,7 +65,24 @@ jobs:
       - name: Run Android lint checks
         run: gradle --no-daemon lint
 
-      - name: Upload APKs and diagnostic reports
+      - name: Collect installable APKs into a simple folder
+        if: success()
+        run: |
+          mkdir -p artifacts/apks
+          find app/build/outputs/apk -type f -name '*.apk' -exec cp -f {} artifacts/apks/ \;
+          echo "Installable APKs produced:"
+          ls -lh artifacts/apks
+
+      - name: Upload installable APKs
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apks
+          path: artifacts/apks/*.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload diagnostic reports only
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -73,6 +90,5 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
           path: |
-            app/build/outputs/apk/**/*.apk
-            **/build/reports/**
-            **/build/test-results/**
+            app/build/reports/**
+            app/build/test-results/**
