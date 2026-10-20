@@ -15,6 +15,8 @@ object AssistantCommandRouter {
         if (normalized.isBlank()) return AssistantCommand("empty")
 
         return when {
+            normalized.startsWith("parallel:") -> AssistantCommand("parallel_tasks", text.substringAfter(":", "").trim())
+            normalized.startsWith("do these at once:") -> AssistantCommand("parallel_tasks", text.substringAfter("do these at once:", "").trim())
             normalized in setOf("help", "what can you do", "commands") -> AssistantCommand("help")
             normalized in setOf("back", "go back", "press back") -> AssistantCommand("back")
             normalized in setOf("home", "go home", "press home") -> AssistantCommand("home")
@@ -50,4 +52,8 @@ object AssistantCommandRouter {
             else -> AssistantCommand("unknown", text)
         }
     }
+
+    /** Split only on an explicit delimiter; commas in natural language are not task boundaries. */
+    fun splitParallelTasks(raw: String, maxTasks: Int = 3): List<String> =
+        raw.split("||").map { it.trim() }.filter { it.isNotBlank() }.distinct().take(maxTasks.coerceAtLeast(1))
 }

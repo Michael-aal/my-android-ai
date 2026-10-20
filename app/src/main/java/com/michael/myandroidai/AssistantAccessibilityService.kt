@@ -196,7 +196,7 @@ class AssistantAccessibilityService : AccessibilityService() {
         overlayParams?.let { it.width = dp(320); it.height = WindowManager.LayoutParams.WRAP_CONTENT }
         updateOverlayLayout()
         panel.addView(TextView(this).apply {
-            text = "${RobotPreferences.name(this)}   •   Ready to help"
+            text = "${RobotPreferences.name(this@AssistantAccessibilityService)}   •   Ready to help"
             textSize = 14f
             setTextColor(Color.rgb(83, 210, 157))
         })
@@ -332,7 +332,7 @@ class AssistantAccessibilityService : AccessibilityService() {
         val cmd = AssistantCommandRouter.parse(raw)
         if (cmd.action == "empty") return "Type a command first."
         return when (cmd.action) {
-            "help" -> "Try “search weather in Lagos”, open an app/site, tap a visible label, type text, back, home, read screen, time, date or battery."
+            "help" -> "Try “parallel: explain promises || plan revision” for up to three AI tasks at once, or search, open apps/sites, tap visible labels, type text, back, home, read screen, time, date or battery."
             "open_app" -> launchApp(cmd.argument)
             "open_url" -> openUrl(cmd.argument)
             "search" -> {
@@ -361,6 +361,22 @@ class AssistantAccessibilityService : AccessibilityService() {
                 "I'll move gently around the screen. Say stay when you want me to stop."
             }
             "robot_name" -> "My name is ${RobotPreferences.name(this)}."
+            "parallel_tasks" -> {
+                val tasks = AssistantCommandRouter.splitParallelTasks(cmd.argument, maxTasks = 20)
+                if (tasks.isEmpty()) {
+                    "Use: parallel: task one || task two || task three"
+                } else if (!AiProviderClient.hasKey(this)) {
+                    "No API key configured. Open My Android AI and tap Configure AI first."
+                } else {
+                    ParallelTaskRunner.run(this, tasks) { update, finished ->
+                        responseLabel?.post {
+                            responseLabel?.text = update
+                            if (finished) textToSpeech?.speak("Your parallel tasks have finished. Check the results in the assistant panel.", TextToSpeech.QUEUE_ADD, null, "parallel-tasks-finished")
+                        }
+                    }
+                    "Starting ${tasks.size.coerceAtMost(ParallelTaskRunner.MAX_CONCURRENT_TASKS)} parallel AI tasks…"
+                }
+            }
             "accessibility_settings" -> openSettings(true)
             "tap_text" -> if (clickVisibleText(cmd.argument)) "Tapped “${cmd.argument}”." else "Couldn't find a clickable visible label: ${cmd.argument}"
             "type_text" -> if (setFocusedText(cmd.argument)) "Typed into the focused field." else "Couldn't find a focused text field. Tap the destination field first."

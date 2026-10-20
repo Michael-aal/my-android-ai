@@ -38,6 +38,15 @@ class AssistantCommandRouterTest {
     }
 
     @Test
+    fun parsesParallelTaskCommandsExplicitly() {
+        val command = AssistantCommandRouter.parse("parallel: explain promises || summarize this error || plan revision")
+        assertEquals("parallel_tasks", command.action)
+        assertEquals(3, AssistantCommandRouter.splitParallelTasks(command.argument).size)
+        assertEquals(listOf("one", "two"), AssistantCommandRouter.splitParallelTasks("one || two || three", maxTasks = 2))
+        assertEquals(listOf("one"), AssistantCommandRouter.splitParallelTasks("one || one || "))
+    }
+
+    @Test
     fun handlesBlankAndUnknownCommandsSafely() {
         assertEquals("empty", AssistantCommandRouter.parse("   ").action)
         assertEquals("unknown", AssistantCommandRouter.parse("do something unexpected").action)

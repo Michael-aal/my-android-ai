@@ -305,6 +305,25 @@ class MainActivity : Activity() {
             Toast.makeText(this, "Type or say a command first.", Toast.LENGTH_SHORT).show()
             return
         }
+        if (command.action == "parallel_tasks") {
+            val tasks = AssistantCommandRouter.splitParallelTasks(command.argument, maxTasks = 20)
+            if (tasks.isEmpty()) {
+                transcript.text = "Use: parallel: task one || task two || task three"
+            } else if (!AiProviderClient.hasKey(this)) {
+                transcript.text = "Assistant: No API key configured. Tap Configure AI and save a key before running parallel tasks."
+            } else {
+                transcript.text = "You: $raw\n\nStarting up to ${tasks.size.coerceAtMost(ParallelTaskRunner.MAX_CONCURRENT_TASKS)} independent AI tasks…"
+                ParallelTaskRunner.run(this, tasks) { update, finished ->
+                    runOnUiThread {
+                        transcript.text = "You: $raw\n\n$update"
+                        if (finished) textToSpeech?.speak("Your parallel tasks have finished.", TextToSpeech.QUEUE_ADD, null, "parallel-tasks-finished")
+                    }
+                }
+                textToSpeech?.speak("Starting parallel tasks.", TextToSpeech.QUEUE_FLUSH, null, "parallel-tasks-started")
+            }
+            commandInput.text.clear()
+            return
+        }
         val accessibilityUnavailable = "Cross-app assistance isn't included in this safer sideload build."
         val response = when (command.action) {
             "help" -> if (BuildConfig.ACCESSIBILITY_ASSISTANCE_ENABLED)
