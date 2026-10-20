@@ -1,4 +1,4 @@
-name: Android build
+name: Android build and quality checks
 
 on:
   push:
@@ -7,38 +7,67 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: android-build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   assemble:
+    name: Build APKs, run tests, and lint
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     steps:
       - name: Check out source
         uses: actions/checkout@v4
-      - name: Set up Java
+
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
+
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
         with:
-          packages: platform-tools platforms;android-35 build-tools;35.0.0
-      - name: Set up Gradle
+          packages: |
+            platform-tools
+            platforms;android-35
+            build-tools;35.0.0
+
+      - name: Set up Gradle 8.9
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.9'
-      - name: Build both variants
-        run: gradle assembleSafeDebug assembleFullControlDebug
-      - name: Upload safe APK
+          gradle-version: "8.9"
+
+      - name: Confirm toolchain
+        run: |
+          java -version
+          gradle --version
+          echo "ANDROID_HOME=$ANDROID_HOME"
+
+      - name: Clean previous outputs
+        run: gradle --no-daemon clean
+
+      - name: Compile safe and full-control APK variants
+        run: gradle --no-daemon assembleSafeDebug assembleFullControlDebug
+
+      - name: Run unit tests
+        run: gradle --no-daemon test
+
+      - name: Run Android lint
+        run: gradle --no-daemon lint
+
+      - name: Upload APKs and diagnostic reports
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: my-android-ai-safe-debug-apk
-          path: app/build/outputs/apk/safe/debug/*.apk
-          if-no-files-found: error
+          name: my-android-ai-build-diagnostics
+          if-no-files-found: warn
           retention-days: 14
-      - name: Upload full-control APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: my-android-ai-full-control-debug-apk
-          path: app/build/outputs/apk/fullControl/debug/*.apk
-          if-no-files-found: error
-          retention-days: 14
+          path: |
+            app/build/outputs/apk/**/*.apk
+            app/build/reports/**
+            app/build/test-results/**
