@@ -303,7 +303,7 @@ class AssistantAccessibilityService : AccessibilityService() {
         val cmd = AssistantCommandRouter.parse(raw)
         if (cmd.action == "empty") return "Type a command first."
         return when (cmd.action) {
-            "help" -> "Try open an app/site, tap a visible label, type text, back, home, read screen, time, date or battery."
+            "help" -> "Try “search weather in Lagos”, open an app/site, tap a visible label, type text, back, home, read screen, time, date or battery."
             "open_app" -> launchApp(cmd.argument)
             "open_url" -> openUrl(cmd.argument)
             "search" -> {
