@@ -6,7 +6,7 @@ A native Android assistant built by migrating the reusable intent and assistant 
 
 - Text commands and speech-to-text from the app screen
 - Open common Android apps and URLs
-- Optional Gemini AI using a key entered by the user and encrypted with Android Keystore
+- Selectable Google Gemini, Groq, or OpenRouter AI providers with separate user-entered keys encrypted using Android Keystore
 - Spoken responses through Android Text-to-Speech
 - A separate full-control build with an opt-in Accessibility service for user-requested cross-app actions
 
@@ -40,7 +40,7 @@ Microphone access is requested only when voice input is used. Cross-app assistan
 ## Privacy and security notes
 
 - The service does not log accessibility events in the background. Full-control commands are user-initiated through the visible assistant interface.
-- When you ask the configured Gemini provider a question, that prompt is sent to Google over HTTPS for processing. Do not send passwords, financial details, or other sensitive information.
-- The Gemini API key is entered by the user, encrypted with Android Keystore, and is not committed to GitHub or embedded as a repository constant.
+- AI prompts are sent over HTTPS to the selected provider (Google Gemini, Groq, or OpenRouter) for processing. Review that provider's privacy and retention policies; do not send passwords, financial details, or other sensitive information.
+- Provider API keys are entered by the user, encrypted with Android Keystore, stored separately per provider, and are not committed to GitHub or embedded in the APK.
 - No API keys, local databases, private memory files, recorded audio, or executable archives are intentionally included.
 - A successful build confirms compilation only; it is not a malware verdict or a Play Protect approval.
