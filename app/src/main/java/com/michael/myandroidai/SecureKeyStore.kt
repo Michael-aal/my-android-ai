@@ -32,7 +32,11 @@ object SecureKeyStore {
         // Migrate the original Gemini-only key without exposing it or requiring the user to re-enter it.
         val storageName = storageName(provider)
         val encoded = prefs.getString(storageName, null)
-            ?: if (provider.equals("gemini", true)) prefs.getString("encrypted_gemini_key", null) else null
+            ?: (if (provider.equals("gemini", true)) {
+                prefs.getString("encrypted_gemini_key", null)
+            } else {
+                null
+            })
             ?: return null
         return try {
             val packed = Base64.decode(encoded, Base64.NO_WRAP)
