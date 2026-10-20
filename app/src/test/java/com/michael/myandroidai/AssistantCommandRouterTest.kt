@@ -29,6 +29,15 @@ class AssistantCommandRouterTest {
     }
 
     @Test
+    fun parsesRobotCompanionCommands() {
+        assertEquals("robot_stay", AssistantCommandRouter.parse("stay").action)
+        assertEquals("robot_stay", AssistantCommandRouter.parse("don't move").action)
+        assertEquals("robot_move", AssistantCommandRouter.parse("move around").action)
+        assertEquals("robot_settings", AssistantCommandRouter.parse("robot settings").action)
+        assertEquals("robot_name", AssistantCommandRouter.parse("what is your name").action)
+    }
+
+    @Test
     fun handlesBlankAndUnknownCommandsSafely() {
         assertEquals("empty", AssistantCommandRouter.parse("   ").action)
         assertEquals("unknown", AssistantCommandRouter.parse("do something unexpected").action)
