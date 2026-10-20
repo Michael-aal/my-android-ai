@@ -361,6 +361,20 @@ class AssistantAccessibilityService : AccessibilityService() {
                 "I'll move gently around the screen. Say stay when you want me to stop."
             }
             "robot_name" -> "My name is ${RobotPreferences.name(this)}."
+            "parallel_tasks" -> {
+                val tasks = AssistantCommandRouter.splitParallelTasks(cmd.argument, maxTasks = 20)
+                if (tasks.isEmpty()) {
+                    "Use: parallel: task one || task two || task three"
+                } else {
+                    ParallelTaskRunner.run(this, tasks) { update, finished ->
+                        responseLabel?.post {
+                            responseLabel?.text = update
+                            if (finished) textToSpeech?.speak("Your parallel tasks have finished. Check the results in the assistant panel.", TextToSpeech.QUEUE_ADD, null, "parallel-tasks-finished")
+                        }
+                    }
+                    "Starting ${tasks.size.coerceAtMost(ParallelTaskRunner.MAX_CONCURRENT_TASKS)} parallel AI tasks…"
+                }
+            }
             "accessibility_settings" -> openSettings(true)
             "tap_text" -> if (clickVisibleText(cmd.argument)) "Tapped “${cmd.argument}”." else "Couldn't find a clickable visible label: ${cmd.argument}"
             "type_text" -> if (setFocusedText(cmd.argument)) "Typed into the focused field." else "Couldn't find a focused text field. Tap the destination field first."
