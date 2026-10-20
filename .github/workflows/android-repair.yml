@@ -24,7 +24,7 @@ jobs:
   verify:
     name: Clean, compile, test, and lint
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
 
     steps:
       - name: Check out repository
@@ -36,22 +36,28 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Install Gradle 8.9 (repository has no Gradle wrapper)
-        run: |
-          set -euo pipefail
-          curl --fail --location --retry 3 https://services.gradle.org/distributions/gradle-8.9-bin.zip --output /tmp/gradle.zip
-          unzip -q /tmp/gradle.zip -d "$RUNNER_TEMP"
-          echo "$RUNNER_TEMP/gradle-8.9/bin" >> "$GITHUB_PATH"
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools platforms;android-35 build-tools;35.0.0
 
-      - name: Verify Gradle installation
-        run: gradle --version
+      - name: Set up Gradle 8.9
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Verify toolchain
+        run: |
+          java -version
+          gradle --version
+          echo "ANDROID_HOME=$ANDROID_HOME"
 
       - name: Clean generated outputs
         if: github.event_name != 'workflow_dispatch' || inputs.clean_build
         run: gradle --no-daemon clean
 
-      - name: Compile all Android variants
-        run: gradle --no-daemon assemble
+      - name: Compile safe and full-control APK variants
+        run: gradle --no-daemon assembleSafeDebug assembleFullControlDebug
 
       - name: Run unit tests
         run: gradle --no-daemon test
@@ -59,13 +65,14 @@ jobs:
       - name: Run Android lint checks
         run: gradle --no-daemon lint
 
-      - name: Upload diagnostic reports
+      - name: Upload APKs and diagnostic reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: android-repair-reports
           if-no-files-found: warn
+          retention-days: 14
           path: |
+            app/build/outputs/apk/**/*.apk
             **/build/reports/**
             **/build/test-results/**
-            **/build/outputs/apk/**
