@@ -391,38 +391,10 @@ class AssistantAccessibilityService : AccessibilityService() {
     }
 
     private fun showRobotSettings() {
-        val nameField = EditText(this).apply {
-            setSingleLine(true)
-            hint = "Robot name"
-            setText(RobotPreferences.name(this@AssistantAccessibilityService))
-            setSelection(text.length)
-        }
-        val moveToggle = android.widget.CheckBox(this).apply {
-            text = "Move gently around the screen"
-            setTextColor(Color.WHITE)
-            isChecked = RobotPreferences.autoMove(this@AssistantAccessibilityService)
-        }
-        val content = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(8), dp(20), dp(4))
-            addView(TextView(this@AssistantAccessibilityService).apply {
-                text = "Choose a name and movement style for your floating robot."
-                setTextColor(Color.WHITE)
-            })
-            addView(nameField)
-            addView(moveToggle)
-        }
-        AlertDialog.Builder(this)
-            .setTitle("Robot companion")
-            .setView(content)
-            .setPositiveButton("Save") { _, _ ->
-                RobotPreferences.setName(this, nameField.text.toString())
-                RobotPreferences.setAutoMove(this, moveToggle.isChecked)
-                responseLabel?.text = "Saved robot settings for ${RobotPreferences.name(this)}."
-                if (expanded) renderExpandedPanel()
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+        val intent = Intent(this, MainActivity::class.java)
+            .setAction("com.michael.myandroidai.ACTION_ROBOT_SETTINGS")
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        startActivity(intent)
     }
 
     private fun launchApp(rawName: String): String {
