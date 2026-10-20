@@ -28,10 +28,17 @@ jobs:
           gradle-version: '8.9'
       - name: Build both variants
         run: gradle assembleSafeDebug assembleFullControlDebug
-      - name: Upload safer sideload APK only
+      - name: Upload safe APK
         uses: actions/upload-artifact@v4
         with:
           name: my-android-ai-safe-debug-apk
           path: app/build/outputs/apk/safe/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload full-control APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: my-android-ai-full-control-debug-apk
+          path: app/build/outputs/apk/fullControl/debug/*.apk
           if-no-files-found: error
           retention-days: 14
