@@ -48,7 +48,8 @@ object AiProviderClient {
 
     private const val PREFS = "ai_provider_settings"
     private const val ACTIVE_PROVIDER_KEY = "active_provider"
-    private val executor = Executors.newSingleThreadExecutor()
+    // Bounded concurrency for independent requests; avoid unbounded API fan-out.
+    private val executor = Executors.newFixedThreadPool(3)
 
     fun activeProviderId(context: Context): String {
         val saved = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
