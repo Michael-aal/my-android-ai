@@ -106,7 +106,7 @@ class MainActivity : Activity() {
             textSize = 25f
             gravity = android.view.Gravity.CENTER
             setTextColor(background)
-            background = rounded(accent, 15)
+            this.background = rounded(accent, 15)
         }
         header.addView(brandMark, LinearLayout.LayoutParams(dp(48), dp(48)))
         val brandText = LinearLayout(this).apply {
@@ -126,7 +126,7 @@ class MainActivity : Activity() {
             setTextColor(accent)
             gravity = android.view.Gravity.CENTER
             setPadding(dp(11), dp(8), dp(11), dp(8))
-            background = rounded(panelRaised, 18, stroke)
+            this.background = rounded(panelRaised, 18, stroke)
         }
         header.addView(online)
         root.addView(header)
@@ -134,7 +134,7 @@ class MainActivity : Activity() {
         val hero = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(18), dp(18), dp(18), dp(18))
-            background = rounded(panel, 22, stroke)
+            this.background = rounded(panel, 22, stroke)
         }
         hero.addView(label("YOUR ASSISTANT, REIMAGINED", 10f, purple, true).apply {
             letterSpacing = 0.12f
@@ -165,7 +165,7 @@ class MainActivity : Activity() {
             setTextColor(white)
             setLineSpacing(dp(5).toFloat(), 1.0f)
             setPadding(dp(16), dp(17), dp(16), dp(17))
-            background = rounded(panel, 18, stroke)
+            this.background = rounded(panel, 18, stroke)
         }
         val scroll = ScrollView(this).apply {
             isFillViewport = true
@@ -186,7 +186,7 @@ class MainActivity : Activity() {
             minLines = 1
             maxLines = 4
             setPadding(dp(15), dp(12), dp(15), dp(12))
-            background = rounded(panelRaised, 17, stroke)
+            this.background = rounded(panelRaised, 17, stroke)
             setSingleLine(false)
             imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEND
         }
@@ -200,7 +200,7 @@ class MainActivity : Activity() {
             textSize = 25f
             isAllCaps = false
             setTextColor(background)
-            background = rounded(accent, 17)
+            this.background = rounded(accent, 17)
             contentDescription = "Send command"
             setPadding(0, 0, 0, dp(3))
             setOnClickListener { handleCommand(commandInput.text.toString().trim()) }
@@ -219,7 +219,7 @@ class MainActivity : Activity() {
             textSize = 12f
             isAllCaps = false
             setTextColor(tint)
-            background = rounded(panelRaised, 15, stroke)
+            this.background = rounded(panelRaised, 15, stroke)
             setPadding(dp(8), 0, dp(8), 0)
             setOnClickListener { onClick() }
         }
