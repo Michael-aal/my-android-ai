@@ -1,0 +1,36 @@
+package com.michael.myandroidai
+
+import org.junit.Assert.assertEquals
+import org.junit.Test
+
+class AssistantCommandRouterTest {
+    @Test
+    fun parsesAppAndWebsiteCommands() {
+        assertEquals("open_app", AssistantCommandRouter.parse("open WhatsApp").action)
+        assertEquals("WhatsApp", AssistantCommandRouter.parse("open WhatsApp").argument)
+        assertEquals("open_url", AssistantCommandRouter.parse("open youtube.com").action)
+        assertEquals("https://example.com", AssistantCommandRouter.parse("open https://example.com").argument)
+    }
+
+    @Test
+    fun parsesExplicitDeviceActions() {
+        assertEquals("back", AssistantCommandRouter.parse("go back").action)
+        assertEquals("home", AssistantCommandRouter.parse("go home").action)
+        assertEquals("settings", AssistantCommandRouter.parse("open settings").action)
+        assertEquals("battery", AssistantCommandRouter.parse("check battery").action)
+    }
+
+    @Test
+    fun parsesAccessibilityCommandsWithoutExecutingThem() {
+        assertEquals("tap_text", AssistantCommandRouter.parse("tap Send").action)
+        assertEquals("Send", AssistantCommandRouter.parse("tap Send").argument)
+        assertEquals("type_text", AssistantCommandRouter.parse("type hello there").action)
+        assertEquals("read_screen", AssistantCommandRouter.parse("read screen").action)
+    }
+
+    @Test
+    fun handlesBlankAndUnknownCommandsSafely() {
+        assertEquals("empty", AssistantCommandRouter.parse("   ").action)
+        assertEquals("unknown", AssistantCommandRouter.parse("do something unexpected").action)
+    }
+}
