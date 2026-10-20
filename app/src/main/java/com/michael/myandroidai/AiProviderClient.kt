@@ -34,7 +34,7 @@ object AiProviderClient {
             id = "groq",
             label = "Groq",
             endpoint = "https://api.groq.com/openai/v1/chat/completions",
-            model = "llama-3.3-70b-versatile",
+            model = "openai/gpt-oss-120b",
             apiStyle = ApiStyle.OPENAI_COMPATIBLE
         ),
         Provider(
@@ -150,7 +150,7 @@ object AiProviderClient {
         return when (status) {
             401, 403 -> "Authentication failed for ${provider.label} (HTTP $status). Check that the API key belongs to ${provider.label}, is copied completely, and is active. The key was not changed."
             400 -> "${provider.label} rejected the request (HTTP 400). ${detail ?: "Check the provider model and request settings."}"
-            404 -> "${provider.label} endpoint or model was not found (HTTP 404). The provider may have changed model availability."
+            404 -> "${provider.label} endpoint or model was not found (HTTP 404). ${detail ?: "Check the configured model ID and API endpoint."}"
             429 -> "${provider.label} rate limit or quota reached (HTTP 429). Wait and try again, or check your provider quota."
             in 500..599 -> "${provider.label} is temporarily unavailable (HTTP $status). Try again shortly."
             else -> "${provider.label} request failed (HTTP $status). ${detail ?: "Please try again."}"
