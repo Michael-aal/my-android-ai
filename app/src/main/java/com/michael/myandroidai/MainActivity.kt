@@ -61,82 +61,189 @@ class MainActivity : Activity() {
     }
 
     private fun buildInterface() {
-        val background = android.graphics.Color.rgb(12, 18, 17)
-        val panel = android.graphics.Color.rgb(25, 34, 31)
-        val accent = android.graphics.Color.rgb(83, 210, 157)
-        val white = android.graphics.Color.rgb(240, 246, 243)
+        val background = android.graphics.Color.rgb(8, 12, 22)
+        val panel = android.graphics.Color.rgb(17, 24, 39)
+        val panelRaised = android.graphics.Color.rgb(23, 32, 50)
+        val accent = android.graphics.Color.rgb(110, 231, 255)
+        val purple = android.graphics.Color.rgb(167, 139, 250)
+        val white = android.graphics.Color.rgb(241, 245, 249)
+        val muted = android.graphics.Color.rgb(148, 163, 184)
+        val stroke = android.graphics.Color.rgb(48, 61, 83)
+
+        fun rounded(color: Int, radius: Int, borderColor: Int = android.graphics.Color.TRANSPARENT) =
+            android.graphics.drawable.GradientDrawable().apply {
+                setColor(color)
+                cornerRadius = dp(radius).toFloat()
+                if (borderColor != android.graphics.Color.TRANSPARENT) {
+                    setStroke(dp(1), borderColor)
+                }
+            }
+
+        fun label(value: String, size: Float, color: Int, bold: Boolean = false) =
+            TextView(this).apply {
+                text = value
+                textSize = size
+                setTextColor(color)
+                if (bold) setTypeface(typeface, android.graphics.Typeface.BOLD)
+            }
+
+        window.statusBarColor = background
+        window.navigationBarColor = background
+        window.decorView.systemUiVisibility = 0
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(22), dp(28), dp(22), dp(20))
+            setPadding(dp(20), dp(20), dp(20), dp(14))
             setBackgroundColor(background)
         }
-        root.addView(TextView(this).apply {
-            text = "MY ANDROID AI"
-            textSize = 13f
-            letterSpacing = 0.16f
+
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+        }
+        val brandMark = TextView(this).apply {
+            text = "✦"
+            textSize = 25f
+            gravity = android.view.Gravity.CENTER
+            setTextColor(background)
+            background = rounded(accent, 15)
+        }
+        header.addView(brandMark, LinearLayout.LayoutParams(dp(48), dp(48)))
+        val brandText = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(12), 0, 0, 0)
+            addView(label("MY ANDROID AI", 15f, white, true))
+            addView(label("PERSONAL INTELLIGENCE", 10f, muted, true).apply {
+                letterSpacing = 0.12f
+                setPadding(0, dp(3), 0, 0)
+            })
+        }
+        header.addView(brandText, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        val online = TextView(this).apply {
+            text = "● READY"
+            textSize = 10f
+            letterSpacing = 0.06f
             setTextColor(accent)
+            gravity = android.view.Gravity.CENTER
+            setPadding(dp(11), dp(8), dp(11), dp(8))
+            background = rounded(panelRaised, 18, stroke)
+        }
+        header.addView(online)
+        root.addView(header)
+
+        val hero = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(18), dp(18), dp(18))
+            background = rounded(panel, 22, stroke)
+        }
+        hero.addView(label("YOUR ASSISTANT, REIMAGINED", 10f, purple, true).apply {
+            letterSpacing = 0.12f
         })
-        root.addView(TextView(this).apply {
-            text = "Your AI. Your Android."
-            textSize = 28f
-            setTextColor(white)
-            setPadding(0, dp(10), 0, dp(6))
+        hero.addView(label("Think beyond\nthe screen.", 29f, white, true).apply {
+            setPadding(0, dp(8), 0, dp(7))
+            setLineSpacing(dp(1).toFloat(), 1.0f)
         })
-        root.addView(TextView(this).apply {
-            text = "Built from your original my_ai intent, AI, voice and action architecture."
-            textSize = 14f
-            setTextColor(android.graphics.Color.rgb(174, 190, 183))
+        hero.addView(label("Ask a question, speak naturally, or tell me what to do on your phone.", 13f, muted).apply {
+            setLineSpacing(dp(4).toFloat(), 1.0f)
+        })
+        root.addView(hero, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+        ).apply { topMargin = dp(20) })
+
+        root.addView(label("CONVERSATION", 11f, muted, true).apply {
+            letterSpacing = 0.13f
+            setPadding(dp(2), dp(20), 0, dp(9))
         })
 
         transcript = TextView(this).apply {
             text = if (BuildConfig.ACCESSIBILITY_ASSISTANCE_ENABLED) {
-                "Ready. Try “open WhatsApp”, “open youtube.com”, “what time is it”, or “help”.\n\nCross-app assistance is included in this full-control build and requires explicit activation in Android Accessibility settings."
+                "You're all set. ✦\n\nTry “open WhatsApp”, “open youtube.com”, “what time is it”, or “help”.\n\nCross-app assistance is included in this full-control build and requires explicit activation in Android Accessibility settings."
             } else {
-                "Ready. Try “open WhatsApp”, “open youtube.com”, “what time is it”, or “help”.\n\nThis safer sideload build does not include cross-app screen reading, tapping, typing, or global navigation."
+                "You're all set. ✦\n\nTry “open WhatsApp”, “open youtube.com”, “what time is it”, or “help”.\n\nThis safer sideload build can open apps and websites, handle voice input, and use your configured AI."
             }
-            textSize = 15f
+            textSize = 14f
             setTextColor(white)
-            setPadding(dp(16), dp(18), dp(16), dp(18))
-            setBackgroundColor(panel)
+            setLineSpacing(dp(5).toFloat(), 1.0f)
+            setPadding(dp(16), dp(17), dp(16), dp(17))
+            background = rounded(panel, 18, stroke)
         }
-        val scroll = ScrollView(this).apply { addView(transcript) }
+        val scroll = ScrollView(this).apply {
+            isFillViewport = true
+            clipToPadding = false
+            addView(transcript, ScrollView.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ))
+        }
         root.addView(scroll, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
-        ).apply { topMargin = dp(22); bottomMargin = dp(14) })
+        ).apply { bottomMargin = dp(14) })
 
         commandInput = EditText(this).apply {
-            hint = "Type a command…"
-            setHintTextColor(android.graphics.Color.rgb(139, 158, 149))
+            hint = "Message your assistant…"
+            setHintTextColor(muted)
             setTextColor(white)
-            textSize = 16f
-            minLines = 2
-            setPadding(dp(14), dp(12), dp(14), dp(12))
-            setBackgroundColor(panel)
+            textSize = 15f
+            minLines = 1
+            maxLines = 4
+            setPadding(dp(15), dp(12), dp(15), dp(12))
+            background = rounded(panelRaised, 17, stroke)
+            setSingleLine(false)
+            imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEND
         }
-        root.addView(commandInput, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-        ))
-        root.addView(Button(this).apply {
-            text = "Send command"
+        val composer = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+        }
+        composer.addView(commandInput, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        val sendButton = Button(this).apply {
+            text = "↑"
+            textSize = 25f
+            isAllCaps = false
+            setTextColor(background)
+            background = rounded(accent, 17)
+            contentDescription = "Send command"
+            setPadding(0, 0, 0, dp(3))
             setOnClickListener { handleCommand(commandInput.text.toString().trim()) }
-        }, fullWidthButton())
-        root.addView(Button(this).apply {
-            text = "Speak"
-            setOnClickListener { startVoiceInput() }
-        }, fullWidthButton())
-        root.addView(Button(this).apply {
-            text = "Configure AI"
-            setOnClickListener { configureAi() }
-        }, fullWidthButton())
-        if (BuildConfig.ACCESSIBILITY_ASSISTANCE_ENABLED) {
-            root.addView(Button(this).apply {
-                text = "Set up app assistance"
-                setOnClickListener {
-                    startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                }
-            }, fullWidthButton())
         }
+        composer.addView(sendButton, LinearLayout.LayoutParams(dp(54), dp(54)).apply {
+            leftMargin = dp(9)
+        })
+        root.addView(composer)
+
+        val actions = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+        }
+        fun actionButton(title: String, tint: Int, onClick: () -> Unit) = Button(this).apply {
+            text = title
+            textSize = 12f
+            isAllCaps = false
+            setTextColor(tint)
+            background = rounded(panelRaised, 15, stroke)
+            setPadding(dp(8), 0, dp(8), 0)
+            setOnClickListener { onClick() }
+        }
+        actions.addView(actionButton("◉  Speak", accent) { startVoiceInput() },
+            LinearLayout.LayoutParams(0, dp(46), 1f).apply { rightMargin = dp(6) })
+        actions.addView(actionButton("⚙  Configure AI", purple) { configureAi() },
+            LinearLayout.LayoutParams(0, dp(46), 1f).apply { leftMargin = dp(6) })
+        root.addView(actions, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+        ).apply { topMargin = dp(9) })
+
+        if (BuildConfig.ACCESSIBILITY_ASSISTANCE_ENABLED) {
+            root.addView(actionButton("Set up app assistance", muted) {
+                startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            }, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(44)
+            ).apply { topMargin = dp(8) })
+        }
+
+        root.addView(label("PRIVATE BY DESIGN  •  YOUR KEY STAYS ON THIS DEVICE", 9f, muted).apply {
+            gravity = android.view.Gravity.CENTER
+            letterSpacing = 0.04f
+            setPadding(0, dp(12), 0, 0)
+        })
         setContentView(root)
     }
 
