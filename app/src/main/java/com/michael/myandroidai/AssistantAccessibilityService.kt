@@ -40,6 +40,7 @@ class AssistantAccessibilityService : AccessibilityService() {
     private var windowManager: WindowManager? = null
     private var overlay: LinearLayout? = null
     private var overlayParams: WindowManager.LayoutParams? = null
+    private var robotFaceView: RobotFaceView? = null
     private var commandField: EditText? = null
     private var responseLabel: TextView? = null
     private var expanded = true
@@ -500,6 +501,7 @@ class AssistantAccessibilityService : AccessibilityService() {
         try { windowManager?.removeView(current) } catch (_: Exception) { }
         overlay = null
         overlayParams = null
+        robotFaceView = null
         commandField = null
         responseLabel = null
     }
