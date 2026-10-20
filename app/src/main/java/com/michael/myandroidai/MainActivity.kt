@@ -322,6 +322,20 @@ class MainActivity : Activity() {
                     "Searching for: ${command.argument}"
                 }
             }
+            "parallel_tasks" -> {
+                val tasks = AssistantCommandRouter.splitParallelTasks(command.argument, maxTasks = 20)
+                if (tasks.isEmpty()) {
+                    "Use: parallel: task one || task two || task three"
+                } else {
+                    ParallelTaskRunner.run(this, tasks) { update, finished ->
+                        runOnUiThread {
+                            transcript.text = "You: $raw\\n\\n$update"
+                            if (finished) textToSpeech?.speak("Your parallel tasks have finished.", TextToSpeech.QUEUE_ADD, null, "parallel-tasks-finished")
+                        }
+                    }
+                    "Starting ${tasks.size.coerceAtMost(ParallelTaskRunner.MAX_CONCURRENT_TASKS)} parallel AI tasks…"
+                }
+            }
             "settings" -> launchSettings(false)
             "accessibility_settings" -> if (BuildConfig.ACCESSIBILITY_ASSISTANCE_ENABLED) launchSettings(true) else accessibilityUnavailable
             "back" -> if (!BuildConfig.ACCESSIBILITY_ASSISTANCE_ENABLED) accessibilityUnavailable else if (AssistantAccessibilityService.activeService?.goBack() == true) "Back action sent." else "Accessibility assistance is not active. Enable My Android AI in Accessibility settings first."
