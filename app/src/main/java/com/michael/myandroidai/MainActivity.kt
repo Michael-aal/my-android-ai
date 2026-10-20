@@ -270,7 +270,7 @@ class MainActivity : Activity() {
             "read_screen" -> if (!BuildConfig.ACCESSIBILITY_ASSISTANCE_ENABLED) accessibilityUnavailable else {
                 val lines = AssistantAccessibilityService.activeService?.visibleTextSnapshot().orEmpty()
                 if (lines.isEmpty()) "No visible text available. Make sure the target app is in the foreground and accessibility assistance is enabled."
-                else "Visible screen text:\\n" + lines.take(35).joinToString("\\n")
+                else "Visible screen text:\n" + lines.take(35).joinToString("\n")
             }
             "time" -> "The time is " + DateFormat.getTimeInstance(DateFormat.SHORT).format(Date())
             "date" -> "Today is " + DateFormat.getDateInstance(DateFormat.FULL).format(Date())
