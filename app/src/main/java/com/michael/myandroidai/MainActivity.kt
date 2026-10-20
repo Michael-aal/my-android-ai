@@ -64,7 +64,7 @@ class MainActivity : Activity() {
         }
     }
 
-    override fun onNewIntent(intent: Intent?) {
+    override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         if (intent?.action == "com.michael.myandroidai.ACTION_SEARCH") {
@@ -170,7 +170,7 @@ class MainActivity : Activity() {
 
         transcript = TextView(this).apply {
             text = if (BuildConfig.ACCESSIBILITY_ASSISTANCE_ENABLED) {
-                "You're all set. ✦\n\nTry “open WhatsApp”, “open youtube.com”, “what time is it”, or “help”.\n\nCross-app assistance is included in this full-control build and requires explicit activation in Android Accessibility settings."
+                "You're all set. ✦\n\nTry “open WhatsApp”, “search weather in Lagos”, “open youtube.com”, “what time is it”, or “help”.\n\nCross-app assistance is included in this full-control build and requires explicit activation in Android Accessibility settings."
             } else {
                 "You're all set. ✦\n\nTry “open WhatsApp”, “open youtube.com”, “what time is it”, or “help”.\n\nThis safer sideload build can open apps and websites, handle voice input, and use your configured AI."
             }
@@ -271,9 +271,9 @@ class MainActivity : Activity() {
         val accessibilityUnavailable = "Cross-app assistance isn't included in this safer sideload build."
         val response = when (command.action) {
             "help" -> if (BuildConfig.ACCESSIBILITY_ASSISTANCE_ENABLED)
-                "Try opening apps or websites, time, date, battery, back, home, read screen, tap visible labels, or type into a focused field."
+                "Try searching the web, opening apps or websites, time, date, battery, back, home, reading the screen, tapping visible labels, or typing into a focused field."
             else
-                "Try opening apps or websites, time, date, battery, voice input, or ask the configured AI."
+                "Try searching the web, opening apps or websites, time, date, battery, voice input, or ask the configured AI."
             "open_app" -> openApp(command.argument)
             "open_url" -> openUrl(command.argument)
             "search" -> {
