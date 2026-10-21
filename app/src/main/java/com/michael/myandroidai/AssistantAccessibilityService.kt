@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.BatteryManager
 import android.speech.tts.TextToSpeech
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -122,16 +123,20 @@ class AssistantAccessibilityService : AccessibilityService() {
             setBackgroundColor(Color.rgb(18, 28, 24))
         }
         overlay = panel
-        renderExpandedPanel()
+        // Start as a compact floating button, not a full-width panel.
+        renderCollapsedPanel()
         val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
+            dp(60),
+            dp(60),
             WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.TOP
-            y = dp(24)
+            gravity = Gravity.TOP or Gravity.START
+            x = dp(16)
+            y = dp(120)
         }
         try {
             windowManager?.addView(panel, params)
@@ -144,6 +149,12 @@ class AssistantAccessibilityService : AccessibilityService() {
         val panel = overlay ?: return
         expanded = true
         panel.removeAllViews()
+        panel.setPadding(dp(12), dp(10), dp(12), dp(10))
+        (panel.layoutParams as? WindowManager.LayoutParams)?.let { params ->
+            params.width = dp(320)
+            params.height = WindowManager.LayoutParams.WRAP_CONTENT
+            try { windowManager?.updateViewLayout(panel, params) } catch (_: Exception) { }
+        }
         panel.addView(TextView(this).apply {
             text = "MY ANDROID AI   •   Type a command"
             textSize = 14f
@@ -196,10 +207,62 @@ class AssistantAccessibilityService : AccessibilityService() {
         val panel = overlay ?: return
         expanded = false
         panel.removeAllViews()
+        panel.setPadding(0, 0, 0, 0)
+        (panel.layoutParams as? WindowManager.LayoutParams)?.let { params ->
+            params.width = dp(60)
+            params.height = dp(60)
+            try { windowManager?.updateViewLayout(panel, params) } catch (_: Exception) { }
+        }
         panel.addView(Button(this).apply {
-            text = "Open My Android AI"
-            setOnClickListener { renderExpandedPanel() }
-        })
+            text = "AI"
+            contentDescription = "Open My Android AI assistant"
+            textSize = 16f
+            setTextColor(Color.WHITE)
+            setBackgroundColor(Color.rgb(20, 145, 100))
+            setOnTouchListener(object : android.view.View.OnTouchListener {
+                private var downRawX = 0f
+                private var downRawY = 0f
+                private var startX = 0
+                private var startY = 0
+                private var moved = false
+
+                override fun onTouch(view: android.view.View, event: MotionEvent): Boolean {
+                    val params = panel.layoutParams as? WindowManager.LayoutParams ?: return false
+                    when (event.action) {
+                        MotionEvent.ACTION_DOWN -> {
+                            downRawX = event.rawX
+                            downRawY = event.rawY
+                            startX = params.x
+                            startY = params.y
+                            moved = false
+                            return true
+                        }
+                        MotionEvent.ACTION_MOVE -> {
+                            val dx = (event.rawX - downRawX).toInt()
+                            val dy = (event.rawY - downRawY).toInt()
+                            if (kotlin.math.abs(dx) > dp(6) || kotlin.math.abs(dy) > dp(6)) moved = true
+                            if (moved) {
+                                val maxX = (resources.displayMetrics.widthPixels - dp(60)).coerceAtLeast(0)
+                                val maxY = (resources.displayMetrics.heightPixels - dp(60)).coerceAtLeast(0)
+                                params.x = (startX + dx).coerceIn(0, maxX)
+                                params.y = (startY + dy).coerceIn(0, maxY)
+                                try { windowManager?.updateViewLayout(panel, params) } catch (_: Exception) { }
+                            }
+                            return true
+                        }
+                        MotionEvent.ACTION_UP -> {
+                            if (!moved) {
+                                view.performClick()
+                                renderExpandedPanel()
+                            }
+                            return true
+                        }
+                        MotionEvent.ACTION_CANCEL -> return true
+                    }
+                    return false
+                }
+            })
+        }, LinearLayout.LayoutParams(dp(60), dp(60)))
         updateOverlayFlags(focusable = false)
     }
 
